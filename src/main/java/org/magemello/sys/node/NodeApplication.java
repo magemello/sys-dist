@@ -1,6 +1,7 @@
 package org.magemello.sys.node;
 
-import org.magemello.sys.node.service.ProtocolStorageFactoryService;
+import org.aeonbits.owner.ConfigFactory;
+import org.magemello.sys.node.service.ProtocolFactory;
 import org.magemello.sys.node.service.ProtocolStorageService;
 import org.springframework.beans.factory.config.ConfigurableBeanFactory;
 import org.springframework.boot.SpringApplication;
@@ -17,8 +18,13 @@ public class NodeApplication {
 
 	@Bean
 	@Scope(value = ConfigurableBeanFactory.SCOPE_PROTOTYPE)
-	public ProtocolStorageService personPrototype() {
-		ProtocolStorageFactoryService protocolStorageFactoryService =  new ProtocolStorageFactoryService();
-		protocolStorageFactoryService
+	public ProtocolStorageService provideProtocolStorage(ProtocolFactory factory) {
+		return factory.getProtocolStorage();
 	}
+
+	@Bean
+    @Scope("singleton") 
+    public Configuration provideConfiguration() {
+        return ConfigFactory.create(Configuration.class, System.getenv(), System.getProperties());
+    }
 }

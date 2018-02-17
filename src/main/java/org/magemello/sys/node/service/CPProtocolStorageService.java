@@ -3,7 +3,6 @@ package org.magemello.sys.node.service;
 import org.magemello.sys.node.domain.Record;
 import org.springframework.stereotype.Service;
 
-@Service
 public class CPProtocolStorageService implements ProtocolStorageService {
 
     @Override
