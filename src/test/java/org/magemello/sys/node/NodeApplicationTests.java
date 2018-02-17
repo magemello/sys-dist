@@ -1,4 +1,4 @@
-package org.magemello.sys.node.node;
+package org.magemello.sys.node;
 
 import org.junit.Test;
 import org.junit.runner.RunWith;
