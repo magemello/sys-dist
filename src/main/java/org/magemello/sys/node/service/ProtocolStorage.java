@@ -4,7 +4,7 @@ import org.magemello.sys.node.domain.Record;
 import org.springframework.stereotype.Service;
 
 @Service
-public interface ProtocolService {
+public interface ProtocolStorage {
 
     Record get(String key);
 

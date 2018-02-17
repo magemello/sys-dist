@@ -1,7 +1,7 @@
 package org.magemello.sys.node.controller;
 
 import org.magemello.sys.node.repository.RecordRepository;
-import org.magemello.sys.node.service.ProtocolService;
+import org.magemello.sys.node.service.ProtocolStorage;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class StorageController {
 
     @Autowired
-    ProtocolService protocolService;
+    ProtocolStorage protocolService;
 
     @Autowired
     RecordRepository recordRepository;

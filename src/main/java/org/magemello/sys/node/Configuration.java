@@ -2,10 +2,17 @@ package org.magemello.sys.node;
 
 import org.aeonbits.owner.Accessible;
 import org.aeonbits.owner.Config;
+import org.aeonbits.owner.Config.DefaultValue;
+import org.aeonbits.owner.Config.Key;
 import org.aeonbits.owner.Config.Sources;
 import org.aeonbits.owner.Reloadable;
 
 
-@Sources({"file:~/application.properties"})
+@Sources({  "file:./application.properties",
+            "file:~/application.properties",})
 public interface Configuration extends Config, Accessible, Reloadable {
+    
+    @Key("protocol")
+    @DefaultValue("AC")
+    String protocol();
 }

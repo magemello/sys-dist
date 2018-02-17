@@ -3,8 +3,12 @@ package org.magemello.sys.node.service;
 import org.magemello.sys.node.domain.Record;
 import org.magemello.sys.node.repository.RecordRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Primary;
+import org.springframework.stereotype.Service;
 
-public class ACProtocolService implements ProtocolService {
+@Primary
+@Service("AC")
+public class ACProtocolService implements ProtocolStorage {
 
     @Autowired
     RecordRepository recordRepository;

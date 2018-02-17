@@ -8,5 +8,7 @@ import org.springframework.data.rest.core.annotation.RepositoryRestResource;
 public interface RecordRepository extends PagingAndSortingRepository<Record, Long> {
 
     Record findByKey(String key);
+    
+    void deleteAll();
 
 }
