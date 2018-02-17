@@ -6,7 +6,6 @@ import org.aeonbits.owner.Config.Sources;
 import org.aeonbits.owner.Reloadable;
 
 
-@Sources({ 
-"file:~/application.properties"})
+@Sources({"file:~/application.properties"})
 public interface Configuration extends Config, Accessible, Reloadable {
 }

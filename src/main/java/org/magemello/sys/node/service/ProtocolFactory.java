@@ -4,8 +4,8 @@ import org.springframework.stereotype.Service;
 
 @Service
 public class ProtocolFactory {
-    
-    public ProtocolStorageService getProtocolStorage() {
-        return new ACProtocolStorageService();
+
+    public ProtocolService getProtocolStorage() {
+        return new ACProtocolService();
     }
 }

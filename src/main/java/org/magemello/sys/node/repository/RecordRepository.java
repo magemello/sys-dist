@@ -7,4 +7,6 @@ import org.springframework.data.rest.core.annotation.RepositoryRestResource;
 @RepositoryRestResource(collectionResourceRel = "record", path = "records")
 public interface RecordRepository extends PagingAndSortingRepository<Record, Long> {
 
+    Record findByKey(String key);
+
 }
