@@ -6,9 +6,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Service;
 
-@Primary
 @Service("AC")
-public class ACProtocolService implements ProtocolStorage {
+public class ACProtocolService implements ProtocolService {
 
     @Autowired
     RecordRepository recordRepository;
@@ -21,5 +20,10 @@ public class ACProtocolService implements ProtocolStorage {
     @Override
     public void set(String key, String value) throws Exception {
         recordRepository.save(new Record(key, value));
+    }
+
+    @Override
+    public String test() {
+        return "AC";
     }
 }

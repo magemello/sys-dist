@@ -6,7 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 @Service("AP")
-public class APProtocolService implements ProtocolStorage {
+public class APProtocolService implements ProtocolService {
 
     @Autowired
     RecordRepository recordRepository;
@@ -19,5 +19,10 @@ public class APProtocolService implements ProtocolStorage {
     @Override
     public void set(String key, String value) throws Exception {
         recordRepository.save(new Record(key, value));
+    }
+
+    @Override
+    public String test() {
+        return "AP";
     }
 }
