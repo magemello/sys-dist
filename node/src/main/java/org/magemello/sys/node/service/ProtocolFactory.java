@@ -42,6 +42,7 @@ public class ProtocolFactory {
 
         switch (protocol) {
             case "AC":
+                protocolAC.clearWriteHaeadLog();
                 return protocolAC;
             case "AP":
                 return protocolAP;

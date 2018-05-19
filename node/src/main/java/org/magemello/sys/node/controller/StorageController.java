@@ -22,7 +22,6 @@ public class StorageController {
 
     @RequestMapping(value = {"/{key}/{value}"}, method = RequestMethod.POST)
     public ResponseEntity<?> set(@PathVariable String key, @PathVariable String value) {
-
         try {
             protocolService.set(key, value);
             return new ResponseEntity<>(HttpStatus.OK);
@@ -34,13 +33,11 @@ public class StorageController {
 
     @RequestMapping(value = {"/{key}"}, method = RequestMethod.GET)
     public ResponseEntity<?> get(@PathVariable String key) {
-
         return new ResponseEntity<>(protocolService.get(key), HttpStatus.OK);
     }
 
     @RequestMapping(value = {"/dump"}, method = RequestMethod.GET)
     public ResponseEntity<?> getAll() {
-
         return new ResponseEntity<>(recordRepository.findAll(), HttpStatus.OK);
     }
 }

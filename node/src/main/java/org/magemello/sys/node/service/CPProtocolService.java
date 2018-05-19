@@ -22,7 +22,7 @@ public class CPProtocolService implements ProtocolService {
     }
 
     @Override
-    public String test() {
+    public String protocolName() {
         return "CP";
     }
 }

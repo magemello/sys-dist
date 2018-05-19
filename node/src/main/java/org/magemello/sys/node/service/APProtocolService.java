@@ -22,7 +22,7 @@ public class APProtocolService implements ProtocolService {
     }
 
     @Override
-    public String test() {
+    public String protocolName() {
         return "AP";
     }
 }

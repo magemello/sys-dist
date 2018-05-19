@@ -10,5 +10,5 @@ public interface ProtocolService {
 
     void set(String key, String value) throws Exception;
 
-    String test();
+    String protocolName();
 }
