@@ -72,6 +72,36 @@
 				"description": ""
 			},
 			"response": []
+		},
+		{
+			"name": "http://localhost:7777/ac/vote",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n   \"_ID\" : \"4726f95d-edde-47ce-8e06-60f68aad3cee\",\n\t\"key\" : \"444\",\n\t\"value\" : \"3333\"\n}"
+				},
+				"url": {
+					"raw": "http://localhost:7777/ac/vote",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "7777",
+					"path": [
+						"ac",
+						"vote"
+					]
+				},
+				"description": "VOTE"
+			},
+			"response": []
 		}
 	]
 }

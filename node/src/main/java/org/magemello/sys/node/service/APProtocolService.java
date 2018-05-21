@@ -1,9 +1,11 @@
 package org.magemello.sys.node.service;
 
 import org.magemello.sys.node.domain.Record;
+import org.magemello.sys.node.domain.Response;
 import org.magemello.sys.node.repository.RecordRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import reactor.core.publisher.Mono;
 
 @Service("AP")
 public class APProtocolService implements ProtocolService {
@@ -17,8 +19,9 @@ public class APProtocolService implements ProtocolService {
     }
 
     @Override
-    public void set(String key, String value) throws Exception {
+    public Mono<Response> set(String key, String value) throws Exception {
         recordRepository.save(new Record(key, value));
+        return Mono.empty();
     }
 
     @Override

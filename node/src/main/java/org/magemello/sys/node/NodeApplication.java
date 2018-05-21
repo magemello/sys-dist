@@ -8,9 +8,11 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.cloud.context.config.annotation.RefreshScope;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
+import org.springframework.web.reactive.config.EnableWebFlux;
 
 
 @SpringBootApplication
+@EnableWebFlux
 public class NodeApplication {
 
     @Autowired
