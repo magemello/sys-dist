@@ -3,8 +3,6 @@ package org.magemello.sys.node.clients;
 import org.magemello.sys.node.domain.Record;
 import org.magemello.sys.node.domain.Response;
 import org.magemello.sys.node.service.P2PService;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
@@ -17,14 +15,12 @@ import java.time.Duration;
 @Service
 public class ACProtocolClient {
 
-    private static final Logger log = LoggerFactory.getLogger(ACProtocolClient.class);
-
     @Autowired
     private P2PService p2pService;
 
-    public Mono<Boolean> vote(Record record) {
+    public Mono<Boolean> propose(Record record) {
         return Flux.fromIterable(p2pService.getPeers())
-                .flatMap(peer -> createWebClientVote(record, peer), p2pService.getPeers().size())
+                .flatMap(peer -> createWebClientPropose(record, peer), p2pService.getPeers().size())
                 .timeout(Duration.ofSeconds(10))
                 .all(response -> !response.getStatus().is5xxServerError() && !response.getStatus().is4xxClientError());
     }
@@ -43,10 +39,10 @@ public class ACProtocolClient {
                 .all(response -> !response.getStatus().is5xxServerError() && !response.getStatus().is4xxClientError());
     }
 
-    private Mono<Response> createWebClientVote(Record record, String peer) {
+    private Mono<Response> createWebClientPropose(Record record, String peer) {
         return WebClient.create()
                 .post()
-                .uri(peer + "ac/vote")
+                .uri(peer + "ac/propose")
                 .syncBody(record)
                 .accept(MediaType.APPLICATION_JSON)
                 .retrieve()

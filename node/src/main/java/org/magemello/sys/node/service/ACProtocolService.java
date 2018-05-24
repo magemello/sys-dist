@@ -34,6 +34,8 @@ public class ACProtocolService implements ProtocolService {
 
     @Override
     public Record get(String key) {
+        log.info("AC Service - get for {} ", key);
+
         return recordRepository.findByKey(key);
     }
 
@@ -50,14 +52,14 @@ public class ACProtocolService implements ProtocolService {
             public void subscribe(CoreSubscriber<? super Response> actual) {
                 this.actual = actual;
 
-                acProtocolClient.vote(record)
-                        .doOnError(this::handleVoteError).log("Error -> Sending rollback to peers")
-                        .subscribe(this::handleVoteResult);
+                acProtocolClient.propose(record)
+                        .doOnError(this::handleProposeError).log("Error -> Sending rollback to peers")
+                        .subscribe(this::handleProposeResult);
             }
 
-            private void handleVoteResult(Boolean resultVote) {
+            private void handleProposeResult(Boolean resultVote) {
                 if (resultVote) {
-                    log.info("Vote for {} succeed sending commit to peers", record);
+                    log.info("Propose for {} succeed sending commit to peers", record);
 
                     acProtocolClient.commit(record.get_ID())
                             .doOnError(this::handleError).log("Error executing commit")
@@ -65,8 +67,8 @@ public class ACProtocolService implements ProtocolService {
                 }
             }
 
-            private void handleVoteError(Throwable error) {
-                log.error("Vote for {} failed sending rollback to peers", record);
+            private void handleProposeError(Throwable error) {
+                log.error("Propose for {} failed sending rollback to peers", record);
 
                 acProtocolClient.rollback(record.get_ID())
                         .doOnError(this::handleError).log("Error executing rollback")
@@ -99,15 +101,14 @@ public class ACProtocolService implements ProtocolService {
         return "AC";
     }
 
-    public boolean vote(Record record) {
-        log.info("AC Service - Vote for {} ", record);
+    public boolean propose(Record record) {
+        log.info("AC Service - Propose for {} ", record);
 
         if (!keys.contains(record.getKey())) {
             keys.add(record.getKey());
             writeAheadLog.put(record.get_ID(), record);
             return true;
         }
-
         return false;
     }
 
@@ -130,7 +131,6 @@ public class ACProtocolService implements ProtocolService {
         Record record = writeAheadLog.get(id);
 
         if (record != null) {
-            recordRepository.delete(record);
             writeAheadLog.remove(id);
             keys.remove(record.getKey());
         }

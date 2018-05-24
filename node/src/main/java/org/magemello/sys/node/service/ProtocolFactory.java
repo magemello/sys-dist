@@ -45,6 +45,7 @@ public class ProtocolFactory {
                 protocolAC.clearWriteHaeadLog();
                 return protocolAC;
             case "AP":
+                protocolAP.clearWriteHaeadLog();
                 return protocolAP;
             case "CP":
                 return protocolCP;

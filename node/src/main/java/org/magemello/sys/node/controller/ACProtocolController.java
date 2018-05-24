@@ -11,28 +11,28 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
-@RestController
+@RestController("ac")
 public class ACProtocolController {
 
     @Autowired
-    private ACProtocolService service;
+    private ACProtocolService acProtocolService;
 
-    @PostMapping("ac/vote")
-    public ResponseEntity<Response> vote(@RequestBody Record record) {
+    @PostMapping("propose")
+    public ResponseEntity<Response> propose(@RequestBody Record record) {
         if (isAValidTransaction(record)) {
-            if (service.vote(record)) {
-                return createResponse("AC 2PC Vote - Accepted transaction proposal: " + record.toString(), HttpStatus.OK);
+            if (acProtocolService.propose(record)) {
+                return createResponse("AC 2PC Propose - Accepted transaction proposal: " + record.toString(), HttpStatus.OK);
             } else {
-                return createResponse("AC 2PC Vote - Transaction for key " + record.toString(), HttpStatus.BAD_REQUEST);
+                return createResponse("AC 2PC Propose - Transaction for key: " + record.toString(), HttpStatus.BAD_REQUEST);
             }
         } else {
-            return createResponse("AC 2PC Vote - Invalid proposal", HttpStatus.BAD_REQUEST);
+            return createResponse("AC 2PC Propose - Refused proposal for key: " + record.toString(), HttpStatus.BAD_REQUEST);
         }
     }
 
-    @PostMapping("ac/commit/{id}")
+    @PostMapping("commit/{id}")
     public ResponseEntity<Response> commit(@PathVariable String id) {
-        Record committedRecord = service.commit(id);
+        Record committedRecord = acProtocolService.commit(id);
         if (committedRecord != null) {
             return createResponse("AC 2PC Commit - Transaction executed: " + committedRecord.toString(), HttpStatus.OK);
         } else {
@@ -40,9 +40,9 @@ public class ACProtocolController {
         }
     }
 
-    @PostMapping("ac/rollback/{id}")
+    @PostMapping("rollback/{id}")
     public ResponseEntity<Response> rollback(@PathVariable String id) {
-        Record rolledBackRecord = service.rollback(id);
+        Record rolledBackRecord = acProtocolService.rollback(id);
         if (rolledBackRecord != null) {
             return createResponse("AC 2PC Rollback - Executed: " + rolledBackRecord.toString(), HttpStatus.OK);
         } else {
