@@ -1,9 +1,9 @@
 package org.magemello.sys.node.service;
 
 import org.magemello.sys.node.domain.Record;
-import org.magemello.sys.node.domain.Response;
 import org.magemello.sys.node.repository.RecordRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 
@@ -14,12 +14,13 @@ public class CPProtocolService implements ProtocolService {
     RecordRepository recordRepository;
 
     @Override
-    public Record get(String key) {
-        return recordRepository.findByKey(key);
+    public Mono<ResponseEntity> get(String key) {
+        recordRepository.findByKey(key);
+        return Mono.empty();
     }
 
     @Override
-    public Mono<Response> set(String key, String value) throws Exception {
+    public Mono<ResponseEntity> set(String key, String value) throws Exception {
         recordRepository.save(new Record(key, value));
         return Mono.empty();
     }

@@ -1,6 +1,5 @@
 package org.magemello.sys.node.controller;
 
-import org.magemello.sys.node.domain.Response;
 import org.magemello.sys.node.repository.RecordRepository;
 import org.magemello.sys.node.service.ProtocolService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,13 +19,13 @@ public class StorageController {
     RecordRepository recordRepository;
 
     @PostMapping("/{key}/{value}")
-    public Mono<Response> set(@PathVariable String key, @PathVariable String value) throws Exception {
+    public Mono<ResponseEntity> set(@PathVariable String key, @PathVariable String value) throws Exception {
         return protocolService.set(key, value);
     }
 
     @GetMapping("/{key}")
-    public ResponseEntity<?> get(@PathVariable String key) {
-        return new ResponseEntity<>(protocolService.get(key), HttpStatus.OK);
+    public Mono<ResponseEntity> get(@PathVariable String key) {
+        return protocolService.get(key);
     }
 
     @GetMapping("/dump")

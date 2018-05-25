@@ -2,12 +2,12 @@ package org.magemello.sys.node.service;
 
 import org.magemello.sys.node.clients.ACProtocolClient;
 import org.magemello.sys.node.domain.Record;
-import org.magemello.sys.node.domain.Response;
 import org.magemello.sys.node.repository.RecordRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import reactor.core.CoreSubscriber;
 import reactor.core.publisher.Mono;
@@ -33,67 +33,18 @@ public class ACProtocolService implements ProtocolService {
     private Set<String> keys = new HashSet<>();
 
     @Override
-    public Record get(String key) {
+    public Mono<ResponseEntity> get(String key) {
         log.info("AC Service - get for {} ", key);
 
-        return recordRepository.findByKey(key);
+        return handleGet(key);
     }
 
     @Override
-    public Mono<Response> set(String key, String value) throws Exception {
+    public Mono<ResponseEntity> set(String key, String value) throws Exception {
         log.info("AC Service - Proposing to peers");
         Record record = new Record(key, value);
 
-        return new Mono<Response>() {
-
-            CoreSubscriber<? super Response> actual;
-
-            @Override
-            public void subscribe(CoreSubscriber<? super Response> actual) {
-                this.actual = actual;
-
-                acProtocolClient.propose(record)
-                        .doOnError(this::handleProposeError).log("Error -> Sending rollback to peers")
-                        .subscribe(this::handleProposeResult);
-            }
-
-            private void handleProposeResult(Boolean resultVote) {
-                if (resultVote) {
-                    log.info("Propose for {} succeed sending commit to peers", record);
-
-                    acProtocolClient.commit(record.get_ID())
-                            .doOnError(this::handleError).log("Error executing commit")
-                            .subscribe(this::handleCommitResult);
-                }
-            }
-
-            private void handleProposeError(Throwable error) {
-                log.error("Propose for {} failed sending rollback to peers", record);
-
-                acProtocolClient.rollback(record.get_ID())
-                        .doOnError(this::handleError).log("Error executing rollback")
-                        .subscribe(this::handleRollBackResult);
-            }
-
-            private void handleCommitResult(Boolean resultCommit) {
-                log.info("Peers Committed {}", record);
-                recordRepository.save(record);
-                actual.onNext(new Response("Stored " + record.toString(), HttpStatus.OK));
-                actual.onComplete();
-            }
-
-            private void handleRollBackResult(Boolean RollBack) {
-                log.info("Peers Rolled Back {}", record);
-                recordRepository.delete(record);
-                actual.onNext(new Response("Roll Backed " + record.toString(), HttpStatus.BAD_REQUEST));
-                actual.onComplete();
-            }
-
-            private void handleError(Throwable error) {
-                actual.onNext(new Response(error.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR));
-                actual.onComplete();
-            }
-        };
+        return handleSet(record);
     }
 
     @Override
@@ -137,8 +88,87 @@ public class ACProtocolService implements ProtocolService {
         return record;
     }
 
-    public void clearWriteHaeadLog() {
+    public void clearWriteHeadLog() {
         writeAheadLog.clear();
         keys.clear();
+    }
+
+    private Mono<ResponseEntity> handleGet(String key) {
+        return new Mono<ResponseEntity>() {
+            @Override
+            public void subscribe(CoreSubscriber<? super ResponseEntity> actual) {
+                actual.onNext(ResponseEntity.ok().body(recordRepository.findByKey(key).toString()));
+                actual.onComplete();
+            }
+        };
+    }
+
+    private Mono<ResponseEntity> handleSet(Record record) {
+        return new Mono<ResponseEntity>() {
+
+            CoreSubscriber<? super ResponseEntity> actual;
+
+            @Override
+            public void subscribe(CoreSubscriber<? super ResponseEntity> actual) {
+                this.actual = actual;
+
+                acProtocolClient.propose(record)
+                        .doOnError(this::handleProposeError).log("Error -> Sending rollback to peers")
+                        .subscribe(this::handleProposeResult);
+            }
+
+            private void handleProposeResult(Boolean resultVote) {
+                if (resultVote) {
+                    log.info("Propose for {} succeed sending commit to peers", record);
+
+                    acProtocolClient.commit(record.get_ID())
+                            .doOnError(this::handleError).log("Error executing commit")
+                            .subscribe(this::handleCommitResult);
+                } else {
+                    log.error("Propose for {} failed sending rollback to peers", record);
+
+                    acProtocolClient.rollback(record.get_ID())
+                            .doOnError(this::handleError).log("Error executing rollback")
+                            .subscribe(this::handleRollBackResult);
+                }
+            }
+
+            private void handleProposeError(Throwable error) {
+                log.error("Propose for {} failed sending rollback to peers", record);
+
+                acProtocolClient.rollback(record.get_ID())
+                        .doOnError(this::handleError).log("Error executing rollback")
+                        .subscribe(this::handleRollBackResult);
+            }
+
+            private void handleCommitResult(Boolean resultCommit) {
+                log.info("Peers Committed {}", record);
+
+                recordRepository.save(record);
+
+                actual.onNext(ResponseEntity
+                        .status(HttpStatus.OK)
+                        .body("Stored " + record.toString()));
+                actual.onComplete();
+            }
+
+            private void handleRollBackResult(Boolean RollBack) {
+                log.info("Peers Rolled Back {}", record);
+
+                recordRepository.delete(record);
+
+                actual.onNext(ResponseEntity
+                        .status(HttpStatus.BAD_REQUEST)
+                        .body("Roll Backed " + record.toString()));
+                actual.onComplete();
+            }
+
+            private void handleError(Throwable error) {
+                actual.onNext(ResponseEntity
+                        .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                        .build());
+                actual.onComplete();
+            }
+        };
     }
 }
