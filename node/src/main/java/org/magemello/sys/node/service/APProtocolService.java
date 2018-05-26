@@ -15,6 +15,7 @@ import reactor.core.CoreSubscriber;
 import reactor.core.publisher.Mono;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service("AP")
 @RefreshScope
@@ -42,42 +43,54 @@ public class APProtocolService implements ProtocolService {
     public Mono<ResponseEntity> get(String key) {
         log.info("AP Service - get for {} ", key);
 
-        HashMap<Record, Integer> matches = new HashMap<>();
+        Map<Record, Integer> matches = new HashMap<>();
         List<Record> records = apProtocolClient.read(key).collectList().block();
+        records.add(recordRepository.findByKey(key));
+
         for (Record record : records) {
-            Integer counter = matches.get(record);
-            if (counter != null) {
-                counter++;
-                if (counter >= writeQuorum) {
-                    apProtocolClient.repair(record).subscribe(aBoolean -> {
-                        log.info("Repair outcome " + aBoolean);
-                    });
-                    return Mono.just(ResponseEntity
-                            .status(HttpStatus.OK)
-                            .body(record.toString()));
+            if(record != null){
+                Integer counter = matches.get(record);
+                if (counter != null) {
+                    counter++;
+                    matches.put(record, counter);
+                } else {
+                    matches.put(record, 1);
                 }
-                matches.put(record, counter);
-            } else {
-                matches.put(record, 1);
+
             }
         }
 
-        log.info("Disagreement - Sending repair");
-        Record repair = recordRepository.findByKey(key);
-        if (repair == null) {
-            repair = matches.entrySet().iterator().next().getKey();
-            if (repair == null) {
+        Map<Record, Integer> result = matches.entrySet().stream()
+                .sorted(Map.Entry.comparingByValue(Comparator.reverseOrder()))
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue,
+                        (oldValue, newValue) -> oldValue, LinkedHashMap::new));
+
+        Map.Entry<Record, Integer> entryRecord = result.entrySet().iterator().next();
+
+        Record record = entryRecord.getKey();
+
+        if (record != null) {
+            //TODO Send repair only to who needs it
+            apProtocolClient.repair(record).subscribe(aBoolean -> {
+                log.info("Repair outcome " + aBoolean);
+            });
+            recordRepository.save(record);
+
+
+            if (entryRecord.getValue() >= writeQuorum) {
                 return Mono.just(ResponseEntity
-                        .status(HttpStatus.INTERNAL_SERVER_ERROR)
-                        .body("Disagreement - Termonucleare "));
+                        .status(HttpStatus.OK)
+                        .body("QUORUM " + record.toString()));
+            } else {
+                return Mono.just(ResponseEntity
+                        .status(HttpStatus.OK)
+                        .body("NO QUORUM " + record.toString()));
             }
+        } else {
+            return Mono.just(ResponseEntity
+                    .status(HttpStatus.NOT_FOUND)
+                    .body("Key not found"));
         }
-        apProtocolClient.repair(repair).subscribe(aBoolean -> {
-            log.info("Repair outcome " + aBoolean);
-        });
-        return Mono.just(ResponseEntity
-                .status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body("Disagreement - repairing with " + repair.toString()));
     }
 
     @Override

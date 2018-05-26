@@ -54,7 +54,7 @@ public class APProtocolController {
         return createResponse("AP QUORUM Repair - Executed: " + repairedRecord.toString(), HttpStatus.OK);
     }
 
-    @GetMapping("read/{key}") // TODO: 25/05/2018 MAYBE WE WANT TO CHANGE THE NAME  TO VERIFY
+    @GetMapping("read/{key}")
     public ResponseEntity<Record> read(@PathVariable String key) {
         return ResponseEntity
                 .status(HttpStatus.OK)

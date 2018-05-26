@@ -5,6 +5,7 @@ import org.magemello.sys.node.service.P2PService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.ClientResponse;
@@ -96,6 +97,8 @@ public class APProtocolClient {
                 .get()
                 .uri(peer + "ap/read/" + key)
                 .accept(MediaType.APPLICATION_JSON)
-                .retrieve().bodyToMono(Record.class);
+                .retrieve()
+                .bodyToMono(Record.class)
+                .onErrorResume(throwable -> Mono.empty());
     }
 }
