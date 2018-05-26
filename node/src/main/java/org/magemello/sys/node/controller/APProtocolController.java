@@ -54,13 +54,12 @@ public class APProtocolController {
         return createResponse("AP QUORUM Repair - Executed: " + repairedRecord.toString(), HttpStatus.OK);
     }
 
-    @PostMapping("read") // TODO: 25/05/2018 MAYBE WE WANT TO CHANGE THE NAME  TO VERIFY
-    public ResponseEntity<String> read(@RequestBody Record record) {
-        if (apProtocolService.checkValue(record)) {
-            return createResponse("AP QUORUM Read - Record: " + record.toString() + " match", HttpStatus.OK);
-        } else {
-            return createResponse("AP QUORUM Read - Record: " + record.toString() + " miss match", HttpStatus.BAD_REQUEST);
-        }
+    @GetMapping("read/{key}") // TODO: 25/05/2018 MAYBE WE WANT TO CHANGE THE NAME  TO VERIFY
+    public ResponseEntity<Record> read(@PathVariable String key) {
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(apProtocolService.read(key));
+
     }
 
     private boolean isAValidTransaction(@RequestBody Record record) {

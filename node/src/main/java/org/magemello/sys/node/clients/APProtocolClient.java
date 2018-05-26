@@ -22,15 +22,10 @@ public class APProtocolClient {
     @Autowired
     private P2PService p2pService;
 
-    private static void log(ClientResponse response) {
-        log.info("Vote {}", response.bodyToMono(String.class));
-    }
-
     public Mono<Long> propose(Record record) {
         return Flux.fromIterable(p2pService.getPeers())
                 .flatMap(peer -> createWebClientPropose(record, peer), p2pService.getPeers().size())
                 .timeout(Duration.ofSeconds(10))
-                .doOnNext(APProtocolClient::log)
                 .filter(response -> !response.statusCode().isError())
                 .count();
     }
@@ -57,7 +52,7 @@ public class APProtocolClient {
                 .all(response -> !response.statusCode().isError());
     }
 
-    public Flux<ClientResponse> read(String key) {
+    public Flux<Record> read(String key) {
         return Flux.fromIterable(p2pService.getPeers())
                 .flatMap(peer -> createWebClientRead(key, peer), p2pService.getPeers().size());
     }
@@ -96,11 +91,11 @@ public class APProtocolClient {
                 .exchange();
     }
 
-    private Mono<ClientResponse> createWebClientRead(String key, String peer) {
+    private Mono<Record> createWebClientRead(String key, String peer) {
         return WebClient.create()
                 .get()
                 .uri(peer + "ap/read/" + key)
                 .accept(MediaType.APPLICATION_JSON)
-                .exchange();
+                .retrieve().bodyToMono(Record.class);
     }
 }

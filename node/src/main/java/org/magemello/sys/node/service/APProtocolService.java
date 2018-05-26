@@ -11,15 +11,10 @@ import org.springframework.cloud.context.config.annotation.RefreshScope;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
-import org.springframework.web.reactive.function.client.ClientResponse;
 import reactor.core.CoreSubscriber;
-import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 @Service("AP")
 @RefreshScope
@@ -47,7 +42,42 @@ public class APProtocolService implements ProtocolService {
     public Mono<ResponseEntity> get(String key) {
         log.info("AP Service - get for {} ", key);
 
-        return handleGet(key);
+        HashMap<Record, Integer> matches = new HashMap<>();
+        List<Record> records = apProtocolClient.read(key).collectList().block();
+        for (Record record : records) {
+            Integer counter = matches.get(record);
+            if (counter != null) {
+                counter++;
+                if (counter >= writeQuorum) {
+                    apProtocolClient.repair(record).subscribe(aBoolean -> {
+                        log.info("Repair outcome " + aBoolean);
+                    });
+                    return Mono.just(ResponseEntity
+                            .status(HttpStatus.OK)
+                            .body(record.toString()));
+                }
+                matches.put(record, counter);
+            } else {
+                matches.put(record, 1);
+            }
+        }
+
+        log.info("Disagreement - Sending repair");
+        Record repair = recordRepository.findByKey(key);
+        if (repair == null) {
+            repair = matches.entrySet().iterator().next().getKey();
+            if (repair == null) {
+                return Mono.just(ResponseEntity
+                        .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                        .body("Disagreement - Termonucleare "));
+            }
+        }
+        apProtocolClient.repair(repair).subscribe(aBoolean -> {
+            log.info("Repair outcome " + aBoolean);
+        });
+        return Mono.just(ResponseEntity
+                .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body("Disagreement - repairing with " + repair.toString()));
     }
 
     @Override
@@ -106,52 +136,14 @@ public class APProtocolService implements ProtocolService {
         return recordRepository.save(record);
     }
 
-    public boolean checkValue(Record record) {
-        log.info("AP Service - check value for {} ", record);
-        return recordRepository.findByKey(record.getKey()).equals(record);
+    public Record read(String key) {
+        log.info("AP Service - read record for key {} ", key);
+        return recordRepository.findByKey(key);
     }
 
     public void clearWriteHeadLog() {
         writeAheadLog.clear();
         keys.clear();
-    }
-
-    private Mono<ResponseEntity> handleGet(String key) {
-        return new Mono<ResponseEntity>() {
-
-            CoreSubscriber<? super ResponseEntity> actual;
-
-            @Override
-            public void subscribe(CoreSubscriber<? super ResponseEntity> actual) {
-                this.actual = actual;
-
-                Flux<ClientResponse> responseFlux = apProtocolClient.read(key);
-
-                responseFlux.filter(clientResponse -> !clientResponse.statusCode().isError())
-                        .flatMap(clientResponse -> clientResponse.bodyToMono(Record.class))
-                        .groupBy(record -> record)
-                        .doOnNext(recordRecordGroupedFlux -> {
-                            recordRecordGroupedFlux.count().filter(count -> count >= readQuorum).doOnNext(aLong -> {
-
-                                responseFlux.filter(clientResponse -> clientResponse.statusCode().isError())
-                                        .doOnNext(clientResponse -> {
-                                            apProtocolClient.repair(recordRecordGroupedFlux.key());
-                                        });
-
-                                responseFlux.flatMap(clientResponse -> clientResponse.bodyToMono(Record.class))
-                                        .filter(record -> !record.getValue().equals(recordRecordGroupedFlux.key().getValue()))
-                                        .doOnNext(clientResponse -> {
-                                            apProtocolClient.repair(recordRecordGroupedFlux.key());
-                                        });
-
-                                recordRepository.save(recordRecordGroupedFlux.key());
-                                actual.onNext(ResponseEntity
-                                        .status(HttpStatus.OK)
-                                        .body(recordRecordGroupedFlux.key()));
-                                actual.onComplete();                            });
-                        });
-            }
-        };
     }
 
     private Mono<ResponseEntity> handleSet(Record record) {
@@ -161,29 +153,43 @@ public class APProtocolService implements ProtocolService {
 
             @Override
             public void subscribe(CoreSubscriber<? super ResponseEntity> actual) {
+                log.info("Sending proposal for {} to peers", record);
+
                 this.actual = actual;
 
                 apProtocolClient.propose(record)
-                        .filter(quorumVote -> quorumVote >= writeQuorum)
-                        .log("Propose for " + record.toString() + " succeed sending commit to peers")
-                        .doOnNext(this::commit)
-                        .filter(quorumVote -> quorumVote < writeQuorum)
-                        .doOnNext(this::rollback);
+                        .subscribe(this::handlePropose,
+                                this::handleError);
             }
 
-            private void commit(Long quorum) {
-                log.info("Propose for {} succeed, quorum of {} on {}, sending commit to peers", record, quorum, writeQuorum);
+            private void handlePropose(Long quorum) {
+                if (quorum >= writeQuorum) {
+                    log.info("Propose for {} succeed, quorum of {} on {}, sending commit to peers", record, quorum, writeQuorum);
 
-                apProtocolClient.commit(record.get_ID())
-                        .filter(quorumVote -> quorumVote >= writeQuorum)
-                        .log("Propose for " + record.toString() + " succeed sending commit to peers")
-                        .doOnNext(this::saveRecord)
-                        .filter(quorumVote -> quorumVote < writeQuorum)
-                        .doOnNext(this::commitError);
+                    apProtocolClient.commit(record.get_ID()).subscribe(
+                            this::handleCommit,
+                            this::handleError);
+                } else {
+                    log.info("Propose for {} failed, quorum of {} on {} needed", record, quorum, writeQuorum);
+
+                    this.rollback();
+                }
+
             }
 
-            private void rollback(Long quorum) {
-                log.info("Propose for {} failed, quorum of {} on {} needed", record, quorum, writeQuorum);
+            private void handleCommit(Long quorum) {
+                if (quorum >= writeQuorum) {
+                    log.info("Commit for {} succeed, quorum of {} on {}, sending commit to peers", record, quorum, writeQuorum);
+
+                    this.saveRecord();
+                } else {
+                    log.info("Commit for {} failed, quorum of {} on {} needed", record, quorum, writeQuorum);
+
+                    this.handleError(new Throwable("Commit for " + record.toString() + " failed, quorum of " + quorum + " on " + writeQuorum + " needed"));
+                }
+            }
+
+            private void rollback() {
                 log.info("Sending RollBack to peers for record {}", record);
 
                 apProtocolClient.rollback(record.get_ID())
@@ -191,7 +197,7 @@ public class APProtocolService implements ProtocolService {
                         .subscribe(this::handleRollBackResult);
             }
 
-            private void saveRecord(Long quorumVote) {
+            private void saveRecord() {
                 log.info("Peers Committed {}", record);
 
                 recordRepository.save(record);
@@ -200,16 +206,6 @@ public class APProtocolService implements ProtocolService {
                         .status(HttpStatus.OK)
                         .body("Stored " + record.toString()));
 
-                actual.onComplete();
-            }
-
-            private void commitError(Long quorumVote) {
-                log.error("Commit for {} failed, quorum of {} on {} needed", record, quorumVote, writeQuorum);
-
-                actual.onNext(ResponseEntity
-                        .status(HttpStatus.INTERNAL_SERVER_ERROR)
-                        .body("Commit for " + record.toString() + " failed, quorum of " + quorumVote.toString() + " on " +
-                                "" + writeQuorum.toString() + " " + "needed"));
                 actual.onComplete();
             }
 
