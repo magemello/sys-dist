@@ -29,9 +29,9 @@ public class CPProtocolController {
 //    public ResponseEntity<Record> history() {
 //    }
 
-    private boolean isAValidTransaction(@RequestBody Record record) {
-        return record != null && record.getKey() != null && record.get_ID() != null;
-    }
+//    private boolean isAValidTransaction(@RequestBody Record record) {
+//        return record != null && record.getKey() != null && record.get_ID() != null;
+//    }
 
     private ResponseEntity<String> createResponse(String message, HttpStatus status) {
         return ResponseEntity
