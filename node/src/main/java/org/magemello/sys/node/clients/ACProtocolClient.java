@@ -27,6 +27,7 @@ public class ACProtocolClient {
         return Flux.fromIterable(p2pService.getPeers())
                 .flatMap(peer -> createWebClientPropose(transaction, peer), p2pService.getPeers().size())
                 .timeout(Duration.ofSeconds(clientTimeout))
+                .onErrorResume(throwable -> Mono.just(ClientResponse.create(HttpStatus.REQUEST_TIMEOUT).build()))
                 .all(response -> !response.statusCode().isError());
     }
 
@@ -34,6 +35,7 @@ public class ACProtocolClient {
         return Flux.fromIterable(p2pService.getPeers())
                 .flatMap(peer -> createWebClientCommit(id, peer), p2pService.getPeers().size())
                 .timeout(Duration.ofSeconds(clientTimeout))
+                .onErrorResume(throwable -> Mono.just(ClientResponse.create(HttpStatus.REQUEST_TIMEOUT).build()))
                 .all(response -> !response.statusCode().isError());
     }
 
@@ -41,6 +43,7 @@ public class ACProtocolClient {
         return Flux.fromIterable(p2pService.getPeers())
                 .flatMap(peer -> createWebClientRollBack(id, peer), p2pService.getPeers().size())
                 .timeout(Duration.ofSeconds(clientTimeout))
+                .onErrorResume(throwable -> Mono.just(ClientResponse.create(HttpStatus.REQUEST_TIMEOUT).build()))
                 .all(response -> !response.statusCode().isError());
     }
 
