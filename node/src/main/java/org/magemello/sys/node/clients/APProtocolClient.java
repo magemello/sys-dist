@@ -14,6 +14,8 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.time.Duration;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class APProtocolClient {
@@ -24,12 +26,12 @@ public class APProtocolClient {
     @Autowired
     private P2PService p2pService;
 
-    public Mono<Long> propose(Transaction transaction) {
+
+    public Mono<List<ClientResponse>> propose(Transaction transaction) {
         return Flux.fromIterable(p2pService.getPeers())
                 .flatMap(peer -> createWebClientPropose(transaction, peer), p2pService.getPeers().size())
                 .timeout(Duration.ofSeconds(clientTimeout))
-                .filter(response -> !response.statusCode().isError())
-                .count();
+                .onErrorResume(throwable -> Mono.just(ClientResponse.create(HttpStatus.REQUEST_TIMEOUT).build())).collectList();
     }
 
     public Mono<Long> commit(String id) {
@@ -40,21 +42,28 @@ public class APProtocolClient {
                 .count();
     }
 
-    public Mono<Boolean> rollback(String id) {
-        return Flux.fromIterable(p2pService.getPeers())
+    public Mono<Boolean> rollback(String id, List<ClientResponse> clientResponses) {
+
+        List<String> peers = getNotFailingPeers(clientResponses);
+
+        return Flux.fromIterable(peers)
                 .flatMap(peer -> createWebClientRollBack(id, peer), p2pService.getPeers().size())
                 .timeout(Duration.ofSeconds(clientTimeout))
+                .onErrorResume(throwable -> Mono.just(ClientResponse.create(HttpStatus.REQUEST_TIMEOUT).build()))
                 .all(response -> !response.statusCode().isError());
     }
 
-    public Mono<Boolean> repair(Record record) {
-        return Flux.fromIterable(p2pService.getPeers())
+    public Mono<Boolean> repair(List<ClientResponse> clientResponses, Record record) {
+
+        List<String> peers = getDisaccordingPeers(clientResponses, record);
+
+        return Flux.fromIterable(peers)
                 .flatMap(peer -> createWebClientRepair(record, peer), p2pService.getPeers().size())
                 .timeout(Duration.ofSeconds(clientTimeout))
                 .all(response -> !response.statusCode().isError());
     }
 
-    public Flux<Record> read(String key) {
+    public Flux<ClientResponse> read(String key) {
         return Flux.fromIterable(p2pService.getPeers())
                 .flatMap(peer -> createWebClientRead(key, peer), p2pService.getPeers().size());
     }
@@ -97,13 +106,25 @@ public class APProtocolClient {
                 .onErrorResume(throwable -> Mono.just(ClientResponse.create(HttpStatus.BAD_GATEWAY).build()));
     }
 
-    private Mono<Record> createWebClientRead(String key, String peer) {
+    private Mono<ClientResponse> createWebClientRead(String key, String peer) {
         return WebClient.create()
                 .get()
                 .uri("http://" + peer + "/ap/read/" + key)
                 .accept(MediaType.APPLICATION_JSON)
-                .retrieve()
-                .bodyToMono(Record.class)
-                .onErrorResume(throwable -> Mono.empty());
+                .exchange()
+                .onErrorResume(throwable -> Mono.just(ClientResponse.create(HttpStatus.BAD_GATEWAY).build()));
+    }
+
+    private List<String> getNotFailingPeers(List<ClientResponse> clientResponses) {
+        return clientResponses.stream()
+                .filter(clientResponse -> !clientResponse.statusCode().isError())
+                .map(clientResponse -> clientResponse.headers().header("x-sys-ip").stream().findFirst().get().toString())
+                .collect(Collectors.toList());
+    }
+
+    private List<String> getDisaccordingPeers(List<ClientResponse> clientResponses, Record record) {
+        return clientResponses.stream().filter(clientResponse -> clientResponse.bodyToMono(Record.class).block().equals(record))
+                .map(clientResponse -> clientResponse.headers().header("x-sys-ip").stream().findFirst().get().toString())
+                .collect(Collectors.toList());
     }
 }

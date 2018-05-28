@@ -40,7 +40,7 @@ public class APProtocolController {
         if (committedRecord != null) {
             return createResponse("AP QUORUM Commit - Transaction executed: " + committedRecord.toString(), HttpStatus.OK);
         } else {
-            return createResponse("AP QUORUM Commit - Transaction id " + id + " not found", HttpStatus.BAD_REQUEST);
+            return createResponse("AP QUORUM Commit - Transaction id " + id + " not found", HttpStatus.NOT_FOUND);
         }
 
     }
@@ -52,7 +52,7 @@ public class APProtocolController {
         if (transactionRollBack != null) {
             return createResponse("AP QUORUM Rollback - Executed: " + transactionRollBack.toString(), HttpStatus.OK);
         } else {
-            return createResponse("AP QUORUM Rollback - Transaction id " + id + " not found", HttpStatus.BAD_REQUEST);
+            return createResponse("AP QUORUM Rollback - Transaction id " + id + " not found", HttpStatus.NOT_FOUND);
         }
     }
 
