@@ -11,6 +11,10 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectWriter;
+
 @RestController()
 @RequestMapping("/demo/")
 public class DemoController {
@@ -19,14 +23,19 @@ public class DemoController {
 
     @Autowired
     RecordRepository recordRepository;
-
+    
     @GetMapping("/dump")
-    public ResponseEntity<?> dumpDatabase() {
+    public ResponseEntity<?> dumpDatabase() throws JsonProcessingException {
+        
+        ObjectWriter writer = new ObjectMapper()
+            .writer()
+            .withDefaultPrettyPrinter();
+        
         log.info("===========================");
-        log.info("Current database contents");
+        log.info("Current database contents:");
         Iterable<Record> records = recordRepository.findAll();
         for (Record record : records) {
-            log.info("- {}={}", record.getKey(), record.getValue());
+            log.info(writer.writeValueAsString(record));
         }
         log.info("");
 
