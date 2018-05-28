@@ -8,7 +8,7 @@ fi
 
 delay=""
 if [ $1 = "3004" ]; then
-    delay="-Dserver.delay=500"
+    delay="-Dserver.delay=1500"
 fi
 
 iden=$(echo $1-3000 | bc)
