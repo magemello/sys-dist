@@ -13,12 +13,15 @@ public class P2PService {
     @Value("${server.port}")
     private String serverPort;
 
+    @Value("${server.address}")
+    private String serverAddress;
+
     @Value("#{'${peers}'.split(',')}")
     private List<String> peers;
 
     @PostConstruct
     public void init() {
-        this.peers = peers.stream().filter(port -> !port.equals(serverPort)).collect(Collectors.toList());
+        this.peers = peers.stream().filter(port -> !port.equals(serverAddress + ":" + serverPort)).collect(Collectors.toList());
     }
 
     public List<String> getPeers() {

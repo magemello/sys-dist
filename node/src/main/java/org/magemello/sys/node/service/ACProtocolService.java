@@ -49,6 +49,11 @@ public class ACProtocolService implements ProtocolService {
         return "AC";
     }
 
+    @Override
+    public void clean(){
+        writeAheadLog.clear();
+    }
+
     public boolean propose(Transaction transaction) {
         log.info("AC Service - Propose for {} ", transaction);
 
@@ -81,10 +86,6 @@ public class ACProtocolService implements ProtocolService {
             transaction = writeAheadLog.remove(id);
         }
         return transaction;
-    }
-
-    public void clearWriteHeadLog() {
-        writeAheadLog.clear();
     }
 
     private Mono<ResponseEntity> handleGet(String key) {

@@ -11,5 +11,7 @@ public interface ProtocolService {
 
     Mono<ResponseEntity> set(String key, String value) throws Exception;
 
+    void clean();
+
     String protocolName();
 }

@@ -44,7 +44,7 @@ public class ACProtocolClient {
     private Mono<ClientResponse> createWebClientPropose(Transaction transaction, String peer) {
         return WebClient.create()
                 .post()
-                .uri("http://localhost:" + peer + "ac/propose")
+                .uri("http://" + peer + "/ac/propose")
                 .syncBody(transaction)
                 .accept(MediaType.APPLICATION_JSON)
                 .exchange()
@@ -55,7 +55,7 @@ public class ACProtocolClient {
     private Mono<ClientResponse> createWebClientCommit(String id, String peer) {
         return WebClient.create()
                 .post()
-                .uri("http://localhost:" + peer + "ac/commit/" + id)
+                .uri("http://" + peer + "/ac/commit/" + id)
                 .accept(MediaType.APPLICATION_JSON)
                 .exchange()
                 .onErrorResume(throwable -> Mono.just(ClientResponse.create(HttpStatus.BAD_GATEWAY).build()));
@@ -64,7 +64,7 @@ public class ACProtocolClient {
     private Mono<ClientResponse> createWebClientRollBack(String id, String peer) {
         return WebClient.create()
                 .post()
-                .uri("http://localhost:" + peer + "ac/rollback/" + id)
+                .uri("http://" + peer + "/ac/rollback/" + id)
                 .accept(MediaType.APPLICATION_JSON)
                 .exchange()
                 .onErrorResume(throwable -> Mono.just(ClientResponse.create(HttpStatus.BAD_GATEWAY).build()));

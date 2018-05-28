@@ -101,6 +101,11 @@ public class APProtocolService implements ProtocolService {
     }
 
     @Override
+    public void clean(){
+        writeAheadLog.clear();
+    }
+
+    @Override
     public String protocolName() {
         return "AP";
     }
@@ -149,10 +154,6 @@ public class APProtocolService implements ProtocolService {
     public Record read(String key) {
         log.info("AP Service - read record for key {} ", key);
         return recordRepository.findByKey(key);
-    }
-
-    public void clearWriteHeadLog() {
-        writeAheadLog.clear();
     }
 
     private Mono<ResponseEntity> handleSet(Transaction transaction) {

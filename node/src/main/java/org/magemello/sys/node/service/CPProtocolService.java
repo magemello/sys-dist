@@ -29,4 +29,9 @@ public class CPProtocolService implements ProtocolService {
     public String protocolName() {
         return "CP";
     }
+
+    @Override
+    public void clean(){
+
+    }
 }
