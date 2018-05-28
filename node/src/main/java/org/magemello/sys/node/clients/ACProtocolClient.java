@@ -38,7 +38,7 @@ public class ACProtocolClient {
         return Flux.fromIterable(p2pService.getPeers())
                 .flatMap(peer -> createWebClientRollBack(id, peer), p2pService.getPeers().size())
                 .timeout(Duration.ofSeconds(10))
-                .all(response -> !response.statusCode().is5xxServerError() && !response.statusCode().is4xxClientError());
+                .all(response -> !response.statusCode().isError());
     }
 
     private Mono<ClientResponse> createWebClientPropose(Transaction transaction, String peer) {
