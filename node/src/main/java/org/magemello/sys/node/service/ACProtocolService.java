@@ -76,7 +76,7 @@ public class ACProtocolService implements ProtocolService {
         if (transaction != null) {
             Record record = recordRepository.save(new Record(transaction.getKey(), transaction.getValue()));
             writeAheadLog.remove(id);
-            log.info("- successfullly committed proposal {}", id);
+            log.info("- successfully committed proposal {}", id);
             return record;
         } else {
             log.info("- failed to find proposal {}", id);
@@ -89,7 +89,7 @@ public class ACProtocolService implements ProtocolService {
 
         if (transaction != null) {
             transaction = writeAheadLog.remove(id);
-            log.info("- successfullly rolled back proposal {}", id);
+            log.info("- successfully rolled back proposal {}", id);
         } else {
             log.info("- failed to find proposal {}", id);
         }

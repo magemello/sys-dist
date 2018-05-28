@@ -111,7 +111,7 @@ public class APProtocolService implements ProtocolService {
         if (transaction != null) {
             Record record = recordRepository.save(new Record(transaction.getKey(), transaction.getValue()));
             writeAheadLog.remove(id);
-            log.info("- succefullly committed proposal {}", id);
+            log.info("- successfully committed proposal {}", id);
             return record;
         } else {
             log.info("- failed to find proposal {}", id);
@@ -124,7 +124,7 @@ public class APProtocolService implements ProtocolService {
 
         if (transaction != null) {
             transaction = writeAheadLog.remove(id);
-            log.info("- succefullly rolled back proposal {}", id);
+            log.info("- successfully rolled back proposal {}", id);
         } else {
             log.info("- failed to find proposal {}", id);
         }
