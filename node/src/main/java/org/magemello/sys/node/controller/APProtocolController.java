@@ -58,12 +58,14 @@ public class APProtocolController {
 
     @PostMapping("repair")
     public ResponseEntity<String> repair(@RequestBody Record record) {
+        log.info("/repair for key {}", record.getKey());
         Record repairedRecord = apProtocolService.repair(record);
         return createResponse("AP QUORUM Repair - Executed: " + repairedRecord.toString(), HttpStatus.OK);
     }
 
     @GetMapping("read/{key}")
     public ResponseEntity<Record> read(@PathVariable String key) {
+        log.info("/read for key {}", key);
         return ResponseEntity
                 .status(HttpStatus.OK)
                 .body(apProtocolService.read(key));
