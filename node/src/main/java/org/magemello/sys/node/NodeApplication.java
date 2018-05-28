@@ -49,17 +49,17 @@ public class NodeApplication {
     public ProtocolService provideProtocol() {
         return protocolFactory.getProtocol();
     }
-    
+
     @Bean
     public ApplicationListener<ContextRefreshedEvent> startupLoggingListener() {
-        return new ApplicationListener<ContextRefreshedEvent>() {   
+        return new ApplicationListener<ContextRefreshedEvent>() {
             public void onApplicationEvent(ContextRefreshedEvent event) {
                 if (serverDelay != 0)
                     log.info("...and this server is slow! ({} msec)", serverDelay);
-            }       
+            }
         };
     }
-    
+
 }
 
 @RefreshScope
@@ -68,6 +68,12 @@ class WebMvcConfig implements WebMvcConfigurer {
 
     @Value("${server.delay:0}")
     private Long serverDelay;
+
+    @Value("${server.port}")
+    private String serverPort;
+
+    @Value("${server.address}")
+    private String serverAddress;
 
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
@@ -78,6 +84,9 @@ class WebMvcConfig implements WebMvcConfigurer {
             public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler)
                     throws Exception {
                 Thread.sleep(serverDelay);
+                if (response.getHeader("x-sys-ip") == null) {
+                    response.addHeader("x-sys-ip", serverAddress + ":" + serverPort);
+                }
                 return true;
             }
         });

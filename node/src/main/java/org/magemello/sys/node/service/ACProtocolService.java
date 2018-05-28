@@ -10,11 +10,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.web.reactive.function.client.ClientResponse;
 import reactor.core.CoreSubscriber;
 import reactor.core.publisher.Mono;
 
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service("AC")
 @SuppressWarnings("rawtypes")
@@ -51,7 +54,7 @@ public class ACProtocolService implements ProtocolService {
     }
 
     @Override
-    public void clean(){
+    public void clean() {
         writeAheadLog.clear();
     }
 
@@ -114,12 +117,13 @@ public class ACProtocolService implements ProtocolService {
                 this.actual = actual;
 
                 acProtocolClient.propose(transaction)
-                        .doOnError(this::handleProposeError).log("Error -> Sending rollback to peers")
+                        .doOnError(this::handleError).log("Error -> Sending rollback to peers")
                         .subscribe(this::handleProposeResult);
             }
 
-            private void handleProposeResult(Boolean resultVote) {
-                if (resultVote) {
+            private void handleProposeResult(List<ClientResponse> clientResponses) {
+
+                if (isAgreementReached(clientResponses)) {
                     log.info("Propose for {} succeed sending commit to peers", transaction);
 
                     acProtocolClient.commit(transaction.get_ID())
@@ -128,18 +132,16 @@ public class ACProtocolService implements ProtocolService {
                 } else {
                     log.error("Propose for {} failed sending rollback to peers", transaction);
 
-                    acProtocolClient.rollback(transaction.get_ID())
+                    acProtocolClient
+                            .rollback(transaction.get_ID(),
+                                    clientResponses)
                             .doOnError(this::handleError).log("Error executing rollback")
                             .subscribe(this::handleRollBackResult);
                 }
             }
 
-            private void handleProposeError(Throwable error) {
-                log.error("Propose for {} failed sending rollback to peers", transaction);
-
-                acProtocolClient.rollback(transaction.get_ID())
-                        .doOnError(this::handleError).log("Error executing rollback")
-                        .subscribe(this::handleRollBackResult);
+            private boolean isAgreementReached(List<ClientResponse> clientResponses) {
+                return clientResponses.stream().allMatch(clientResponse -> !clientResponse.statusCode().isError());
             }
 
             private void handleCommitResult(Boolean resultCommit) {

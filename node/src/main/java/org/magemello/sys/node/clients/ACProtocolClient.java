@@ -13,6 +13,8 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.time.Duration;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class ACProtocolClient {
@@ -23,12 +25,11 @@ public class ACProtocolClient {
     @Autowired
     private P2PService p2pService;
 
-    public Mono<Boolean> propose(Transaction transaction) {
+    public Mono<List<ClientResponse>> propose(Transaction transaction) {
         return Flux.fromIterable(p2pService.getPeers())
                 .flatMap(peer -> createWebClientPropose(transaction, peer), p2pService.getPeers().size())
                 .timeout(Duration.ofSeconds(clientTimeout))
-                .onErrorResume(throwable -> Mono.just(ClientResponse.create(HttpStatus.REQUEST_TIMEOUT).build()))
-                .all(response -> !response.statusCode().isError());
+                .onErrorResume(throwable -> Mono.just(ClientResponse.create(HttpStatus.REQUEST_TIMEOUT).build())).collectList();
     }
 
     public Mono<Boolean> commit(String id) {
@@ -39,8 +40,11 @@ public class ACProtocolClient {
                 .all(response -> !response.statusCode().isError());
     }
 
-    public Mono<Boolean> rollback(String id) {
-        return Flux.fromIterable(p2pService.getPeers())
+    public Mono<Boolean> rollback(String id, List<ClientResponse> clientResponses) {
+
+        List<String> peers = getNotFailingPeers(clientResponses);
+
+        return Flux.fromIterable(peers)
                 .flatMap(peer -> createWebClientRollBack(id, peer), p2pService.getPeers().size())
                 .timeout(Duration.ofSeconds(clientTimeout))
                 .onErrorResume(throwable -> Mono.just(ClientResponse.create(HttpStatus.REQUEST_TIMEOUT).build()))
@@ -74,5 +78,12 @@ public class ACProtocolClient {
                 .accept(MediaType.APPLICATION_JSON)
                 .exchange()
                 .onErrorResume(throwable -> Mono.just(ClientResponse.create(HttpStatus.BAD_GATEWAY).build()));
+    }
+
+    private List<String> getNotFailingPeers(List<ClientResponse> clientResponses) {
+        return clientResponses.stream()
+                .filter(clientResponse -> !clientResponse.statusCode().isError()).map(clientResponse -> clientResponse.headers().header("x-sys-ip").stream()
+                        .findFirst().toString())
+                .collect(Collectors.toList());
     }
 }
