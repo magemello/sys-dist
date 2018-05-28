@@ -5,6 +5,7 @@ import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 
 @Service
+@SuppressWarnings("rawtypes")
 public interface ProtocolService {
 
     Mono<ResponseEntity> get(String key);

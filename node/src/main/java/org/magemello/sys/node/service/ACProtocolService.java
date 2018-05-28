@@ -17,6 +17,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 @Service("AC")
+@SuppressWarnings("rawtypes")
 public class ACProtocolService implements ProtocolService {
 
     private static final Logger log = LoggerFactory.getLogger(ACProtocolService.class);
