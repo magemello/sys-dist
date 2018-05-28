@@ -1,11 +1,9 @@
 package org.magemello.sys.node.domain;
 
-import javax.persistence.GeneratedValue;
-import javax.persistence.GenerationType;
+import java.util.UUID;
 
 public class Transaction {
 
-    @GeneratedValue(strategy = GenerationType.AUTO)
     private String _ID;
 
     private String key;
@@ -16,6 +14,7 @@ public class Transaction {
     }
 
     public Transaction(String key, String value) {
+        this._ID = UUID.randomUUID().toString();
         this.key = key;
         this.value = value;
     }
