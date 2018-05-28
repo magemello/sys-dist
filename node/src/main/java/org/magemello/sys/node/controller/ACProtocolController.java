@@ -1,6 +1,7 @@
 package org.magemello.sys.node.controller;
 
 import org.magemello.sys.node.domain.Record;
+import org.magemello.sys.node.domain.Transaction;
 import org.magemello.sys.node.service.ACProtocolService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -15,15 +16,15 @@ public class ACProtocolController {
     private ACProtocolService acProtocolService;
 
     @PostMapping("propose")
-    public ResponseEntity<String> propose(@RequestBody Record record) {
-        if (isAValidTransaction(record)) {
-            if (acProtocolService.propose(record)) {
-                return createResponse("AC 2PC Propose - Accepted transaction proposal: " + record.toString(), HttpStatus.OK);
+    public ResponseEntity<String> propose(@RequestBody Transaction transaction) {
+        if (isAValidTransaction(transaction)) {
+            if (acProtocolService.propose(transaction)) {
+                return createResponse("AC 2PC Propose - Accepted transaction proposal: " + transaction.toString(), HttpStatus.OK);
             } else {
-                return createResponse("AC 2PC Propose - Transaction for key: " + record.toString(), HttpStatus.BAD_REQUEST);
+                return createResponse("AC 2PC Propose - Transaction for key: " + transaction.toString(), HttpStatus.BAD_REQUEST);
             }
         } else {
-            return createResponse("AC 2PC Propose - Refused proposal for key: " + record.toString(), HttpStatus.BAD_REQUEST);
+            return createResponse("AC 2PC Propose - Refused proposal for key: " + transaction.toString(), HttpStatus.BAD_REQUEST);
         }
     }
 
@@ -39,7 +40,7 @@ public class ACProtocolController {
 
     @PostMapping("rollback/{id}")
     public ResponseEntity<String> rollback(@PathVariable String id) {
-        Record rolledBackRecord = acProtocolService.rollback(id);
+        Transaction rolledBackRecord = acProtocolService.rollback(id);
         if (rolledBackRecord != null) {
             return createResponse("AC 2PC Rollback - Executed: " + rolledBackRecord.toString(), HttpStatus.OK);
         } else {
@@ -48,8 +49,9 @@ public class ACProtocolController {
     }
 
 
-    private boolean isAValidTransaction(@RequestBody Record record) {
-        return record != null && record.getKey() != null && record.get_ID() != null;
+    private boolean isAValidTransaction(@RequestBody Transaction transaction) {
+        return transaction != null && transaction.getKey() != null && transaction.get_ID() !=
+                null;
     }
 
     private ResponseEntity<String> createResponse(String message, HttpStatus status) {

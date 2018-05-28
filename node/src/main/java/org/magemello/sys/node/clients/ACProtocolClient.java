@@ -1,6 +1,7 @@
 package org.magemello.sys.node.clients;
 
 import org.magemello.sys.node.domain.Record;
+import org.magemello.sys.node.domain.Transaction;
 import org.magemello.sys.node.service.P2PService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
@@ -18,9 +19,9 @@ public class ACProtocolClient {
     @Autowired
     private P2PService p2pService;
 
-    public Mono<Boolean> propose(Record record) {
+    public Mono<Boolean> propose(Transaction transaction) {
         return Flux.fromIterable(p2pService.getPeers())
-                .flatMap(peer -> createWebClientPropose(record, peer), p2pService.getPeers().size())
+                .flatMap(peer -> createWebClientPropose(transaction, peer), p2pService.getPeers().size())
                 .timeout(Duration.ofSeconds(10))
                 .all(response -> !response.statusCode().isError());
     }
@@ -39,11 +40,11 @@ public class ACProtocolClient {
                 .all(response -> !response.statusCode().is5xxServerError() && !response.statusCode().is4xxClientError());
     }
 
-    private Mono<ClientResponse> createWebClientPropose(Record record, String peer) {
+    private Mono<ClientResponse> createWebClientPropose(Transaction transaction, String peer) {
         return WebClient.create()
                 .post()
                 .uri(peer + "ac/propose")
-                .syncBody(record)
+                .syncBody(transaction)
                 .accept(MediaType.APPLICATION_JSON)
                 .exchange();
     }

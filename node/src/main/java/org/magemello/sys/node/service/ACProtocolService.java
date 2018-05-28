@@ -2,6 +2,7 @@ package org.magemello.sys.node.service;
 
 import org.magemello.sys.node.clients.ACProtocolClient;
 import org.magemello.sys.node.domain.Record;
+import org.magemello.sys.node.domain.Transaction;
 import org.magemello.sys.node.repository.RecordRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -12,10 +13,8 @@ import org.springframework.stereotype.Service;
 import reactor.core.CoreSubscriber;
 import reactor.core.publisher.Mono;
 
-import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.Set;
 
 @Service("AC")
 public class ACProtocolService implements ProtocolService {
@@ -28,9 +27,7 @@ public class ACProtocolService implements ProtocolService {
     @Autowired
     private ACProtocolClient acProtocolClient;
 
-    private Map<String, Record> writeAheadLog = new LinkedHashMap<>();
-
-    private Set<String> keys = new HashSet<>();
+    private Map<String, Transaction> writeAheadLog = new LinkedHashMap<>();
 
     @Override
     public Mono<ResponseEntity> get(String key) {
@@ -42,9 +39,9 @@ public class ACProtocolService implements ProtocolService {
     @Override
     public Mono<ResponseEntity> set(String key, String value) throws Exception {
         log.info("AC Service - Proposing to peers");
-        Record record = new Record(key, value);
 
-        return handleSet(record);
+        Transaction transaction = new Transaction(key, value);
+        return handleSet(transaction);
     }
 
     @Override
@@ -52,12 +49,11 @@ public class ACProtocolService implements ProtocolService {
         return "AC";
     }
 
-    public boolean propose(Record record) {
-        log.info("AC Service - Propose for {} ", record);
+    public boolean propose(Transaction transaction) {
+        log.info("AC Service - Propose for {} ", transaction);
 
-        if (!keys.contains(record.getKey())) {
-            keys.add(record.getKey());
-            writeAheadLog.put(record.get_ID(), record);
+        if (isAProposalPresentFor(transaction.getKey())) {
+            writeAheadLog.put(transaction.get_ID(), transaction);
             return true;
         }
         return false;
@@ -66,31 +62,29 @@ public class ACProtocolService implements ProtocolService {
     public Record commit(String id) {
         log.info("AC Service - Commit id {} ", id);
 
-        Record record = writeAheadLog.get(id);
+        Transaction transaction = writeAheadLog.get(id);
+        Record record = null;
 
-        if (record != null) {
-            recordRepository.save(record);
+        if (transaction != null) {
+            record = recordRepository.save(new Record(transaction.getKey(), transaction.getValue()));
             writeAheadLog.remove(id);
-            keys.remove(record.getKey());
         }
         return record;
     }
 
-    public Record rollback(String id) {
+    public Transaction rollback(String id) {
         log.info("AC Service - Rollback id {} ", id);
 
-        Record record = writeAheadLog.get(id);
+        Transaction transaction = writeAheadLog.get(id);
 
-        if (record != null) {
-            writeAheadLog.remove(id);
-            keys.remove(record.getKey());
+        if (transaction != null) {
+            transaction = writeAheadLog.remove(id);
         }
-        return record;
+        return transaction;
     }
 
     public void clearWriteHeadLog() {
         writeAheadLog.clear();
-        keys.clear();
     }
 
     private Mono<ResponseEntity> handleGet(String key) {
@@ -103,7 +97,7 @@ public class ACProtocolService implements ProtocolService {
         };
     }
 
-    private Mono<ResponseEntity> handleSet(Record record) {
+    private Mono<ResponseEntity> handleSet(Transaction transaction) {
         return new Mono<ResponseEntity>() {
 
             CoreSubscriber<? super ResponseEntity> actual;
@@ -112,52 +106,52 @@ public class ACProtocolService implements ProtocolService {
             public void subscribe(CoreSubscriber<? super ResponseEntity> actual) {
                 this.actual = actual;
 
-                acProtocolClient.propose(record)
+                acProtocolClient.propose(transaction)
                         .doOnError(this::handleProposeError).log("Error -> Sending rollback to peers")
                         .subscribe(this::handleProposeResult);
             }
 
             private void handleProposeResult(Boolean resultVote) {
                 if (resultVote) {
-                    log.info("Propose for {} succeed sending commit to peers", record);
+                    log.info("Propose for {} succeed sending commit to peers", transaction);
 
-                    acProtocolClient.commit(record.get_ID())
+                    acProtocolClient.commit(transaction.get_ID())
                             .doOnError(this::handleError).log("Error executing commit")
                             .subscribe(this::handleCommitResult);
                 } else {
-                    log.error("Propose for {} failed sending rollback to peers", record);
+                    log.error("Propose for {} failed sending rollback to peers", transaction);
 
-                    acProtocolClient.rollback(record.get_ID())
+                    acProtocolClient.rollback(transaction.get_ID())
                             .doOnError(this::handleError).log("Error executing rollback")
                             .subscribe(this::handleRollBackResult);
                 }
             }
 
             private void handleProposeError(Throwable error) {
-                log.error("Propose for {} failed sending rollback to peers", record);
+                log.error("Propose for {} failed sending rollback to peers", transaction);
 
-                acProtocolClient.rollback(record.get_ID())
+                acProtocolClient.rollback(transaction.get_ID())
                         .doOnError(this::handleError).log("Error executing rollback")
                         .subscribe(this::handleRollBackResult);
             }
 
             private void handleCommitResult(Boolean resultCommit) {
-                log.info("Peers Committed {}", record);
+                log.info("Peers Committed {}", transaction);
 
-                recordRepository.save(record);
+                recordRepository.save(new Record(transaction.getKey(), transaction.getValue()));
 
                 actual.onNext(ResponseEntity
                         .status(HttpStatus.OK)
-                        .body("Stored " + record.toString()));
+                        .body("Stored " + transaction.toString()));
                 actual.onComplete();
             }
 
             private void handleRollBackResult(Boolean RollBack) {
-                log.info("Peers Rolled Back {}", record);
+                log.info("Peers Rolled Back {}", transaction);
 
                 actual.onNext(ResponseEntity
                         .status(HttpStatus.BAD_REQUEST)
-                        .body("Roll Backed " + record.toString()));
+                        .body("Roll Backed " + transaction.toString()));
                 actual.onComplete();
             }
 
@@ -168,5 +162,12 @@ public class ACProtocolService implements ProtocolService {
                 actual.onComplete();
             }
         };
+    }
+
+    private boolean isAProposalPresentFor(String key) {
+        return this.writeAheadLog
+                .entrySet()
+                .stream()
+                .allMatch(stringRecordEntry -> stringRecordEntry.getValue().getKey().equals(key));
     }
 }
