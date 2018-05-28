@@ -43,7 +43,7 @@ public class ACProtocolClient {
     private Mono<ClientResponse> createWebClientPropose(Transaction transaction, String peer) {
         return WebClient.create()
                 .post()
-                .uri(peer + "ac/propose")
+                .uri("http://localhost:" + peer + "ac/propose")
                 .syncBody(transaction)
                 .accept(MediaType.APPLICATION_JSON)
                 .exchange();
@@ -52,7 +52,7 @@ public class ACProtocolClient {
     private Mono<ClientResponse> createWebClientCommit(String id, String peer) {
         return WebClient.create()
                 .post()
-                .uri(peer + "ac/commit/" + id)
+                .uri("http://localhost:" + peer + "ac/commit/" + id)
                 .accept(MediaType.APPLICATION_JSON)
                 .exchange();
     }
@@ -60,7 +60,7 @@ public class ACProtocolClient {
     private Mono<ClientResponse> createWebClientRollBack(String id, String peer) {
         return WebClient.create()
                 .post()
-                .uri(peer + "ac/rollback/" + id)
+                .uri("http://localhost:" + peer + "ac/rollback/" + id)
                 .accept(MediaType.APPLICATION_JSON)
                 .exchange();
     }

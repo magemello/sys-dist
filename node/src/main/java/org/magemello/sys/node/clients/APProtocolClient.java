@@ -57,7 +57,7 @@ public class APProtocolClient {
     private Mono<ClientResponse> createWebClientPropose(Transaction transaction, String peer) {
         return WebClient.create()
                 .post()
-                .uri(peer + "ap/propose")
+                .uri("http://localhost:" + peer + "ap/propose")
                 .syncBody(transaction)
                 .accept(MediaType.APPLICATION_JSON)
                 .exchange();
@@ -66,7 +66,7 @@ public class APProtocolClient {
     private Mono<ClientResponse> createWebClientCommit(String id, String peer) {
         return WebClient.create()
                 .post()
-                .uri(peer + "ap/commit/" + id)
+                .uri("http://localhost:" + peer + "ap/commit/" + id)
                 .accept(MediaType.APPLICATION_JSON)
                 .exchange();
     }
@@ -74,7 +74,7 @@ public class APProtocolClient {
     private Mono<ClientResponse> createWebClientRollBack(String id, String peer) {
         return WebClient.create()
                 .post()
-                .uri(peer + "ap/rollback/" + id)
+                .uri("http://localhost:" + peer + "ap/rollback/" + id)
                 .accept(MediaType.APPLICATION_JSON)
                 .exchange();
     }
@@ -82,7 +82,7 @@ public class APProtocolClient {
     private Mono<ClientResponse> createWebClientRepair(Record record, String peer) {
         return WebClient.create()
                 .post()
-                .uri(peer + "ap/repair")
+                .uri("http://localhost:" + peer + "ap/repair")
                 .syncBody(record)
                 .accept(MediaType.APPLICATION_JSON)
                 .exchange();
@@ -91,7 +91,7 @@ public class APProtocolClient {
     private Mono<Record> createWebClientRead(String key, String peer) {
         return WebClient.create()
                 .get()
-                .uri(peer + "ap/read/" + key)
+                .uri("http://localhost:" + peer + "ap/read/" + key)
                 .accept(MediaType.APPLICATION_JSON)
                 .retrieve()
                 .bodyToMono(Record.class)
