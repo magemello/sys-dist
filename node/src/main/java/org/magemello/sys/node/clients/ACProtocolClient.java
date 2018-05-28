@@ -82,8 +82,8 @@ public class ACProtocolClient {
 
     private List<String> getNotFailingPeers(List<ClientResponse> clientResponses) {
         return clientResponses.stream()
-                .filter(clientResponse -> !clientResponse.statusCode().isError()).map(clientResponse -> clientResponse.headers().header("x-sys-ip").stream()
-                        .findFirst().toString())
+                .filter(clientResponse -> !clientResponse.statusCode().isError())
+                .map(clientResponse -> clientResponse.headers().header("x-sys-ip").stream().findFirst().get().toString())
                 .collect(Collectors.toList());
     }
 }
