@@ -17,7 +17,7 @@ import reactor.core.publisher.Mono;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
+
 
 @Service("AC")
 @SuppressWarnings("rawtypes")
@@ -93,7 +93,7 @@ public class ACProtocolService implements ProtocolService {
         } else {
             log.info("- failed to find proposal {}", id);
         }
-        
+
         return transaction;
     }
 
