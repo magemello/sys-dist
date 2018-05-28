@@ -3,6 +3,8 @@ package org.magemello.sys.node.controller;
 import org.magemello.sys.node.domain.Record;
 import org.magemello.sys.node.domain.Transaction;
 import org.magemello.sys.node.service.APProtocolService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -12,11 +14,14 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("ap")
 public class APProtocolController {
 
+    private static final Logger log = LoggerFactory.getLogger(APProtocolController.class);
+
     @Autowired
     private APProtocolService apProtocolService;
 
     @PostMapping("propose")
     public ResponseEntity<String> propose(@RequestBody Transaction transaction) {
+        log.info("/propose for transaction {}", transaction.get_ID());
         if (isAValidTransaction(transaction)) {
             if (apProtocolService.propose(transaction)) {
                 return createResponse("AP QUORUM Propose - Accepted transaction proposal: " + transaction.toString(), HttpStatus.OK);
@@ -30,6 +35,7 @@ public class APProtocolController {
 
     @PostMapping("commit/{id}")
     public ResponseEntity<String> commit(@PathVariable String id) {
+        log.info("/commit for transaction {}", id);
         Record committedRecord = apProtocolService.commit(id);
         if (committedRecord != null) {
             return createResponse("AP QUORUM Commit - Transaction executed: " + committedRecord.toString(), HttpStatus.OK);
@@ -41,6 +47,7 @@ public class APProtocolController {
 
     @PostMapping("rollback/{id}")
     public ResponseEntity<String> rollback(@PathVariable String id) {
+        log.info("/rollback for transaction {}", id);
         Transaction transactionRollBack = apProtocolService.rollback(id);
         if (transactionRollBack != null) {
             return createResponse("AP QUORUM Rollback - Executed: " + transactionRollBack.toString(), HttpStatus.OK);
