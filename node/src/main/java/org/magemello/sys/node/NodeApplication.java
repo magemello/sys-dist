@@ -52,11 +52,9 @@ public class NodeApplication {
 
     @Bean
     public ApplicationListener<ContextRefreshedEvent> startupLoggingListener() {
-        return new ApplicationListener<ContextRefreshedEvent>() {
-            public void onApplicationEvent(ContextRefreshedEvent event) {
-                if (serverDelay != 0)
-                    log.info("...and this server is slow! ({} msec)", serverDelay);
-            }
+        return event -> {
+            if (serverDelay != 0)
+                log.info("...and this server is slow! ({} msec)", serverDelay);
         };
     }
 
@@ -78,7 +76,6 @@ class WebMvcConfig implements WebMvcConfigurer {
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
         registry.addInterceptor(new HandlerInterceptor() {
-
 
             @Override
             public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler)

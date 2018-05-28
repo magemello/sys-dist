@@ -48,7 +48,7 @@ public class ProtocolFactory {
                 protocolAP.reset();
                 return protocolAP;
             case "CP":
-                protocolAC.reset();
+                protocolCP.reset();
                 return protocolCP;
 
             default:
