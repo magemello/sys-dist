@@ -155,8 +155,6 @@ public class ACProtocolService implements ProtocolService {
             private void handleRollBackResult(Boolean RollBack) {
                 log.info("Peers Rolled Back {}", record);
 
-                recordRepository.delete(record);
-
                 actual.onNext(ResponseEntity
                         .status(HttpStatus.BAD_REQUEST)
                         .body("Roll Backed " + record.toString()));

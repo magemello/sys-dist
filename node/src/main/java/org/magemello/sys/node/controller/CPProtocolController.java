@@ -12,22 +12,22 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("cp")
 public class CPProtocolController {
 
-    @Autowired
-    private CPProtocolService cpProtocolService;
-
-    @PostMapping("update")
-    public ResponseEntity<String> update(@RequestBody Record record) {
-
-    }
-
-    @PostMapping("voteforme")
-    public ResponseEntity<String> voteforme(@RequestBody Record record) {
-
-    }
-
-    @GetMapping("history")
-    public ResponseEntity<Record> history() {
-    }
+//    @Autowired
+//    private CPProtocolService cpProtocolService;
+//
+//    @PostMapping("update")
+//    public ResponseEntity<String> update(@RequestBody Record record) {
+//
+//    }
+//
+//    @PostMapping("voteforme")
+//    public ResponseEntity<String> voteforme(@RequestBody Record record) {
+//
+//    }
+//
+//    @GetMapping("history")
+//    public ResponseEntity<Record> history() {
+//    }
 
     private boolean isAValidTransaction(@RequestBody Record record) {
         return record != null && record.getKey() != null && record.get_ID() != null;

@@ -13,5 +13,4 @@ public class CPProtocolClient {
 
     @Autowired
     private P2PService p2pService;
-
 }
