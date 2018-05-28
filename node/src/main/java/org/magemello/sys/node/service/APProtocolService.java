@@ -8,7 +8,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.cloud.context.config.annotation.RefreshScope;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -20,7 +19,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 @Service("AP")
-@RefreshScope
+@SuppressWarnings("rawtypes")
 public class APProtocolService implements ProtocolService {
 
     private static final Logger log = LoggerFactory.getLogger(APProtocolService.class);
@@ -260,5 +259,15 @@ public class APProtocolService implements ProtocolService {
                 .entrySet()
                 .stream()
                 .allMatch(stringRecordEntry -> stringRecordEntry.getValue().getKey().equals(key));
+    }
+
+    @Override
+    public void start() {
+        log.info("AP mode (sloppy quorums)");
+        
+    }
+
+    @Override
+    public void stop() {
     }
 }

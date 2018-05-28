@@ -2,13 +2,15 @@ package org.magemello.sys.node.controller;
 
 import org.magemello.sys.node.domain.Record;
 import org.magemello.sys.node.repository.RecordRepository;
-import org.magemello.sys.node.service.ProtocolService;
+import org.magemello.sys.node.service.ProtocolServiceProxy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -26,7 +28,7 @@ public class DemoController {
     RecordRepository recordRepository;
 
     @Autowired
-    ProtocolService protocolService;
+    ProtocolServiceProxy protocolService;
     
     @GetMapping("/dump")
     public ResponseEntity<?> dumpDatabase() throws JsonProcessingException {
@@ -55,6 +57,13 @@ public class DemoController {
         }
         
         return new ResponseEntity<>(HttpStatus.OK);
+    }
+
+    @PostMapping("/mode/{name}")
+    public ResponseEntity<?> switchProtocol(@PathVariable String name) {
+        cleanScreen();
+        boolean res = protocolService.switchProtocol(name);
+        return new ResponseEntity<>(res ? HttpStatus.OK : HttpStatus.BAD_REQUEST);
     }
 
 }

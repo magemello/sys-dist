@@ -15,4 +15,8 @@ public interface ProtocolService {
     void reset();
 
     String protocolName();
+    
+    void start();
+    
+    void stop();
 }

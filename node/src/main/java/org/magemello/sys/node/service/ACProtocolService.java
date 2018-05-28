@@ -179,4 +179,13 @@ public class ACProtocolService implements ProtocolService {
                 .stream()
                 .anyMatch(stringRecordEntry -> stringRecordEntry.getValue().getKey().equals(key));
     }
+
+    @Override
+    public void start() {
+        log.info("AC mode (two-phase commit)");
+    }
+
+    @Override
+    public void stop() {
+    }
 }

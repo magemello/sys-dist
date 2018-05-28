@@ -4,7 +4,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
-import org.LatencyUtils.TimeServices.ScheduledExecutor;
 import org.magemello.sys.node.domain.Record;
 import org.magemello.sys.node.repository.RecordRepository;
 import org.slf4j.Logger;
@@ -15,6 +14,7 @@ import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 
 @Service("CP")
+@SuppressWarnings("rawtypes")
 public class CPProtocolService implements ProtocolService {
 
     private static final Logger log = LoggerFactory.getLogger(CPProtocolService.class);
@@ -23,36 +23,20 @@ public class CPProtocolService implements ProtocolService {
     private final long DEFAULT_UPDATE_TIMEOUT = 2500;
     private final long DEFAULT_ELECTION_TIMEOUT = 5000;
         
+    @Autowired
     private RecordRepository recordRepository;
+    @Autowired
     private P2PService p2pService;
 
-    private final int majorityQuorum;
+    private volatile Runnable status;
 
-    private Runnable status;
+    private int majorityQuorum;
     private long endOfTermTime;
     
     private int currentTerm = 0;
     private int currentTick = 0;
     private int currentLeader = 0;
     
-    @Autowired
-    CPProtocolService(RecordRepository recordRepository, P2PService p2pService) {
-        this.p2pService = p2pService;
-        this.recordRepository = recordRepository;
-        
-        status = follower;
-        majorityQuorum = p2pService.getPeers().size()/2;
-
-//        ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
-//        scheduleNext(scheduler, new Runnable() {
-//            @Override
-//            public void run() {
-//                status.run();;
-//                scheduleNext(scheduler, this);
-//            }
-//        });
-    }
-
     private void scheduleNext(ScheduledExecutorService scheduler, Runnable runnable) {
         scheduler.schedule(runnable, randomized(DEFAULT_TICK_TIMEOUT/2), TimeUnit.MILLISECONDS);
     }
@@ -120,6 +104,35 @@ public class CPProtocolService implements ProtocolService {
 
     private long randomized(long value) {
         return value + (long) (Math.random()*(value/3));
+    }
+
+    @Override
+    public void start() {
+        log.info("CP mode (majority quorum, raft)");
+        status = follower;
+        majorityQuorum = p2pService.getPeers().size()/2;
+
+        ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
+        scheduleNext(scheduler, new Runnable() {
+            @Override
+            public void run() {
+                if (status != null) {
+                    status.run();
+                    scheduleNext(scheduler, this);
+                }
+            }
+        });
+    }
+
+    @Override
+    public void stop() {
+        status = null;
+
+        try {
+            Thread.sleep(DEFAULT_TICK_TIMEOUT);
+        } catch (InterruptedException e) {
+            Thread.interrupted();
+        }
     }
 
 

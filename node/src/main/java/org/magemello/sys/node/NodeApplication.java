@@ -4,19 +4,15 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import org.magemello.sys.node.repository.RecordRepository;
-import org.magemello.sys.node.service.ProtocolFactory;
-import org.magemello.sys.node.service.ProtocolService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.cloud.context.config.annotation.RefreshScope;
 import org.springframework.context.ApplicationListener;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Primary;
 import org.springframework.context.event.ContextRefreshedEvent;
 import org.springframework.web.reactive.config.EnableWebFlux;
 import org.springframework.web.servlet.HandlerInterceptor;
@@ -36,18 +32,8 @@ public class NodeApplication {
     @Autowired
     RecordRepository recordRepository;
 
-    @Autowired
-    ProtocolFactory protocolFactory;
-
     public static void main(String[] args) {
         SpringApplication.run(NodeApplication.class, args);
-    }
-
-    @Bean
-    @Primary
-    @RefreshScope
-    public ProtocolService provideProtocol() {
-        return protocolFactory.getProtocol();
     }
 
     @Bean
@@ -59,8 +45,6 @@ public class NodeApplication {
     }
 
 }
-
-@RefreshScope
 @Configuration
 class WebMvcConfig implements WebMvcConfigurer {
 
@@ -80,7 +64,11 @@ class WebMvcConfig implements WebMvcConfigurer {
             @Override
             public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler)
                     throws Exception {
-                Thread.sleep(serverDelay);
+                
+                String pathInfo = request.getRequestURI();
+                if (!pathInfo.startsWith("/demo"))
+                    Thread.sleep(serverDelay);
+
                 if (response.getHeader("x-sys-ip") == null) {
                     response.addHeader("x-sys-ip", serverAddress + ":" + serverPort);
                 }
