@@ -40,9 +40,9 @@ public class ACProtocolController {
 
     @PostMapping("rollback/{id}")
     public ResponseEntity<String> rollback(@PathVariable String id) {
-        Transaction rolledBackRecord = acProtocolService.rollback(id);
-        if (rolledBackRecord != null) {
-            return createResponse("AC 2PC Rollback - Executed: " + rolledBackRecord.toString(), HttpStatus.OK);
+        Transaction transactionRollBack = acProtocolService.rollback(id);
+        if (transactionRollBack != null) {
+            return createResponse("AC 2PC Rollback - Executed: " + transactionRollBack.toString(), HttpStatus.OK);
         } else {
             return createResponse("AC 2PC Rollback - Transaction id " + id + " not found", HttpStatus.BAD_REQUEST);
         }
@@ -50,8 +50,7 @@ public class ACProtocolController {
 
 
     private boolean isAValidTransaction(@RequestBody Transaction transaction) {
-        return transaction != null && transaction.getKey() != null && transaction.get_ID() !=
-                null;
+        return transaction != null && transaction.getKey() != null && transaction.get_ID() != null;
     }
 
     private ResponseEntity<String> createResponse(String message, HttpStatus status) {

@@ -1,6 +1,7 @@
 package org.magemello.sys.node.controller;
 
 import org.magemello.sys.node.domain.Record;
+import org.magemello.sys.node.domain.Transaction;
 import org.magemello.sys.node.service.APProtocolService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -15,15 +16,15 @@ public class APProtocolController {
     private APProtocolService apProtocolService;
 
     @PostMapping("propose")
-    public ResponseEntity<String> propose(@RequestBody Record record) {
-        if (isAValidTransaction(record)) {
-            if (apProtocolService.propose(record)) {
-                return createResponse("AP QUORUM Propose - Accepted transaction proposal: " + record.toString(), HttpStatus.OK);
+    public ResponseEntity<String> propose(@RequestBody Transaction transaction) {
+        if (isAValidTransaction(transaction)) {
+            if (apProtocolService.propose(transaction)) {
+                return createResponse("AP QUORUM Propose - Accepted transaction proposal: " + transaction.toString(), HttpStatus.OK);
             } else {
-                return createResponse("AP QUORUM Propose - Transaction for key: " + record.toString(), HttpStatus.BAD_REQUEST);
+                return createResponse("AP QUORUM Propose - Transaction for key: " + transaction.toString(), HttpStatus.BAD_REQUEST);
             }
         } else {
-            return createResponse("AP QUORUM Propose - Refused proposal for key: " + record.toString(), HttpStatus.BAD_REQUEST);
+            return createResponse("AP QUORUM Propose - Refused proposal for key: " + transaction.toString(), HttpStatus.BAD_REQUEST);
         }
     }
 
@@ -40,9 +41,9 @@ public class APProtocolController {
 
     @PostMapping("rollback/{id}")
     public ResponseEntity<String> rollback(@PathVariable String id) {
-        Record rolledBackRecord = apProtocolService.rollback(id);
-        if (rolledBackRecord != null) {
-            return createResponse("AP QUORUM Rollback - Executed: " + rolledBackRecord.toString(), HttpStatus.OK);
+        Transaction transactionRollBack = apProtocolService.rollback(id);
+        if (transactionRollBack != null) {
+            return createResponse("AP QUORUM Rollback - Executed: " + transactionRollBack.toString(), HttpStatus.OK);
         } else {
             return createResponse("AP QUORUM Rollback - Transaction id " + id + " not found", HttpStatus.BAD_REQUEST);
         }
@@ -62,8 +63,8 @@ public class APProtocolController {
 
     }
 
-    private boolean isAValidTransaction(@RequestBody Record record) {
-        return record != null && record.getKey() != null && record.get_ID() != null;
+    private boolean isAValidTransaction(@RequestBody Transaction transaction) {
+        return transaction != null && transaction.getKey() != null && transaction.get_ID() != null;
     }
 
     private ResponseEntity<String> createResponse(String message, HttpStatus status) {

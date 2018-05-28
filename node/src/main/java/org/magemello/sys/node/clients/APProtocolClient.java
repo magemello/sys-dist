@@ -1,11 +1,9 @@
 package org.magemello.sys.node.clients;
 
 import org.magemello.sys.node.domain.Record;
+import org.magemello.sys.node.domain.Transaction;
 import org.magemello.sys.node.service.P2PService;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.ClientResponse;
@@ -18,14 +16,12 @@ import java.time.Duration;
 @Service
 public class APProtocolClient {
 
-    private static final Logger log = LoggerFactory.getLogger(APProtocolClient.class);
-
     @Autowired
     private P2PService p2pService;
 
-    public Mono<Long> propose(Record record) {
+    public Mono<Long> propose(Transaction transaction) {
         return Flux.fromIterable(p2pService.getPeers())
-                .flatMap(peer -> createWebClientPropose(record, peer), p2pService.getPeers().size())
+                .flatMap(peer -> createWebClientPropose(transaction, peer), p2pService.getPeers().size())
                 .timeout(Duration.ofSeconds(10))
                 .filter(response -> !response.statusCode().isError())
                 .count();
@@ -58,11 +54,11 @@ public class APProtocolClient {
                 .flatMap(peer -> createWebClientRead(key, peer), p2pService.getPeers().size());
     }
 
-    private Mono<ClientResponse> createWebClientPropose(Record record, String peer) {
+    private Mono<ClientResponse> createWebClientPropose(Transaction transaction, String peer) {
         return WebClient.create()
                 .post()
                 .uri(peer + "ap/propose")
-                .syncBody(record)
+                .syncBody(transaction)
                 .accept(MediaType.APPLICATION_JSON)
                 .exchange();
     }
