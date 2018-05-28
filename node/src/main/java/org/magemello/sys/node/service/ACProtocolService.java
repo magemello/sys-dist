@@ -56,36 +56,41 @@ public class ACProtocolService implements ProtocolService {
     }
 
     public boolean propose(Transaction transaction) {
-        log.info("AC Service - Propose for {} ", transaction);
 
-        if (isAProposalPresentFor(transaction.getKey())) {
+        if (!isAProposalPresentFor(transaction.getKey())) {
+            log.info("- accepted proposal {} for key {}", transaction.get_ID(), transaction.getKey());
             writeAheadLog.put(transaction.get_ID(), transaction);
             return true;
+        } else {
+            log.info("- refused proposal {} for key {} (already present)", transaction.get_ID(), transaction.getKey());
+            return false;
         }
-        return false;
     }
 
     public Record commit(String id) {
-        log.info("AC Service - Commit id {} ", id);
-
         Transaction transaction = writeAheadLog.get(id);
-        Record record = null;
 
         if (transaction != null) {
-            record = recordRepository.save(new Record(transaction.getKey(), transaction.getValue()));
+            Record record = recordRepository.save(new Record(transaction.getKey(), transaction.getValue()));
             writeAheadLog.remove(id);
+            log.info("- succefullly committed proposal {}", id);
+            return record;
+        } else {
+            log.info("- failed to find proposal {}", id);
+            return null;
         }
-        return record;
     }
 
     public Transaction rollback(String id) {
-        log.info("AC Service - Rollback id {} ", id);
-
         Transaction transaction = writeAheadLog.get(id);
 
         if (transaction != null) {
             transaction = writeAheadLog.remove(id);
+            log.info("- succefullly rolled back proposal {}", id);
+        } else {
+            log.info("- failed to find proposal {}", id);
         }
+        
         return transaction;
     }
 
@@ -170,6 +175,6 @@ public class ACProtocolService implements ProtocolService {
         return this.writeAheadLog
                 .entrySet()
                 .stream()
-                .allMatch(stringRecordEntry -> stringRecordEntry.getValue().getKey().equals(key));
+                .anyMatch(stringRecordEntry -> stringRecordEntry.getValue().getKey().equals(key));
     }
 }
