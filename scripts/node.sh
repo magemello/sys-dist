@@ -6,4 +6,5 @@ if [ -z "$1" ]
     exit 1
 fi
 
-java -Dserver.port=$1 -jar ../target/node-0.0.1-SNAPSHOT.jar 
+cd ../node
+mvn -Dserver.port=$1 spring-boot:run
