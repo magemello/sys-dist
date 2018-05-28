@@ -2,6 +2,7 @@ package org.magemello.sys.node.controller;
 
 import org.magemello.sys.node.domain.Record;
 import org.magemello.sys.node.repository.RecordRepository;
+import org.magemello.sys.node.service.ProtocolService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,6 +24,9 @@ public class DemoController {
 
     @Autowired
     RecordRepository recordRepository;
+
+    @Autowired
+    ProtocolService protocolService;
     
     @GetMapping("/dump")
     public ResponseEntity<?> dumpDatabase() throws JsonProcessingException {
@@ -44,10 +48,13 @@ public class DemoController {
 
     @GetMapping("/clean")
     public ResponseEntity<?> cleanScreen() {
+        protocolService.reset();
+        
         for(int i=0; i<100; i++) {
             log.info("");
         }
         
         return new ResponseEntity<>(HttpStatus.OK);
     }
+
 }

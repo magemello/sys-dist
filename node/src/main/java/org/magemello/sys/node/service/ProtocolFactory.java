@@ -42,13 +42,13 @@ public class ProtocolFactory {
 
         switch (protocol) {
             case "AC":
-                protocolAC.clean();
+                protocolAC.reset();
                 return protocolAC;
             case "AP":
-                protocolAP.clean();
+                protocolAP.reset();
                 return protocolAP;
             case "CP":
-                protocolAC.clean();
+                protocolAC.reset();
                 return protocolCP;
 
             default:

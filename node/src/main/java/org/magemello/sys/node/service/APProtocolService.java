@@ -101,7 +101,7 @@ public class APProtocolService implements ProtocolService {
     }
 
     @Override
-    public void clean(){
+    public void reset(){
         writeAheadLog.clear();
     }
 

@@ -1,7 +1,5 @@
 package org.magemello.sys.node.domain;
 
-import java.util.UUID;
-
 public class Transaction {
 
     private String _ID;
@@ -14,7 +12,7 @@ public class Transaction {
     }
 
     public Transaction(String key, String value) {
-        this._ID = UUID.randomUUID().toString();
+        this._ID = Long.toHexString(System.currentTimeMillis());
         this.key = key;
         this.value = value;
     }

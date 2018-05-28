@@ -31,7 +31,7 @@ public class CPProtocolService implements ProtocolService {
     }
 
     @Override
-    public void clean(){
+    public void reset(){
 
     }
 }

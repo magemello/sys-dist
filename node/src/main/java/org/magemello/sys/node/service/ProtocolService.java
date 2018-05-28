@@ -12,7 +12,7 @@ public interface ProtocolService {
 
     Mono<ResponseEntity> set(String key, String value) throws Exception;
 
-    void clean();
+    void reset();
 
     String protocolName();
 }
