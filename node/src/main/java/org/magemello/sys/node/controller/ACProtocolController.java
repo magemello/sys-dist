@@ -34,7 +34,7 @@ public class ACProtocolController {
         if (committedRecord != null) {
             return createResponse("AC 2PC Commit - Transaction executed: " + committedRecord.toString(), HttpStatus.OK);
         } else {
-            return createResponse("AC 2PC Commit - Transaction id " + id + " not found", HttpStatus.BAD_REQUEST);
+            return createResponse("AC 2PC Commit - Transaction id " + id + " not found", HttpStatus.NOT_FOUND);
         }
     }
 
@@ -44,7 +44,7 @@ public class ACProtocolController {
         if (transactionRollBack != null) {
             return createResponse("AC 2PC Rollback - Executed: " + transactionRollBack.toString(), HttpStatus.OK);
         } else {
-            return createResponse("AC 2PC Rollback - Transaction id " + id + " not found", HttpStatus.BAD_REQUEST);
+            return createResponse("AC 2PC Rollback - Transaction id " + id + " not found", HttpStatus.NOT_FOUND);
         }
     }
 
