@@ -16,6 +16,8 @@ import reactor.core.CoreSubscriber;
 import reactor.core.publisher.Mono;
 
 import java.util.*;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 @Service("AP")
@@ -33,10 +35,10 @@ public class APProtocolService implements ProtocolService {
     private Map<String, Transaction> writeAheadLog = new LinkedHashMap<>();
 
     @Value("${read-quorum:2}")
-    private Long readQuorum;
+    private Integer readQuorum;
 
     @Value("${write-quorum:1}")
-    private Long writeQuorum;
+    private Integer writeQuorum;
 
     @Override
     public Mono<ResponseEntity> get(String key) {
@@ -70,7 +72,7 @@ public class APProtocolService implements ProtocolService {
             log.info("Repair outcome " + aBoolean);
         });
 
-        if(!recordRepository.findByKey(record.getKey()).equals(record)){
+        if (!recordRepository.findByKey(record.getKey()).equals(record)) {
             recordRepository.save(record);
         }
     }
@@ -84,7 +86,7 @@ public class APProtocolService implements ProtocolService {
     }
 
     @Override
-    public void reset(){
+    public void reset() {
         writeAheadLog.clear();
     }
 
@@ -145,7 +147,10 @@ public class APProtocolService implements ProtocolService {
     private Mono<ResponseEntity> handleSet(Transaction transaction) {
         return new Mono<ResponseEntity>() {
 
-            CoreSubscriber<? super ResponseEntity> actual;
+            private CoreSubscriber<? super ResponseEntity> actual;
+
+            AtomicInteger commitQuorum = new AtomicInteger(0);
+            AtomicBoolean returnedValue = new AtomicBoolean(false);
 
             @Override
             public void subscribe(CoreSubscriber<? super ResponseEntity> actual) {
@@ -164,39 +169,46 @@ public class APProtocolService implements ProtocolService {
                     log.info("Propose for {} succeed, quorum of {} on {}, sending commit to peers", transaction, quorum, writeQuorum);
 
                     apProtocolClient.commit(transaction.get_ID())
-                            .doOnError(this::handleError).log("Error executing commit")
-                            .subscribe(this::handleCommit);
+                            .map(this::manageCommitQuorum).collectList()
+                            .subscribe(this::handleCommit,
+                                    this::handleError);
                 } else {
                     log.info("Propose for {} failed, quorum of {} on {} needed", transaction, quorum, writeQuorum);
 
                     apProtocolClient.rollback(transaction.get_ID(), clientResponses)
-                            .doOnError(this::handleError).log("Error executing rollback")
-                            .subscribe(this::handleRollBackResult);
+                            .subscribe(this::handleRollBackResult,
+                                    this::handleError);
                 }
             }
 
-            private void handleCommit(Long quorum) {
+            private ClientResponse manageCommitQuorum(ClientResponse clientResponse) {
+                if (!clientResponse.statusCode().isError()) {
+                    if (commitQuorum.incrementAndGet() > writeQuorum) {
+                        if (!returnedValue.getAndSet(true)) {
+                            Record record = new Record(transaction.getKey(), transaction.getValue());
+                            recordRepository.save(record);
+
+                            actual.onNext(ResponseEntity
+                                    .status(HttpStatus.OK)
+                                    .body("Stored " + record.toString()));
+                            actual.onComplete();
+                        }
+                    }
+                }
+
+                return clientResponse;
+            }
+
+            private void handleCommit(List<ClientResponse> clientResponses) {
+                Integer quorum = commitQuorum.get();
+
                 if (quorum >= writeQuorum) {
                     log.info("Commit for {} succeed, quorum of {} on {}, sending commit to peers", transaction, quorum, writeQuorum);
-
-                    this.saveRecord();
                 } else {
                     log.info("Commit for {} failed, quorum of {} on {} needed", transaction, quorum, writeQuorum);
 
                     this.handleError(new Throwable("Commit for " + transaction.toString() + " failed, quorum of " + quorum + " on " + writeQuorum + " needed"));
                 }
-            }
-
-            private void saveRecord() {
-                log.info("Peers Committed {}", transaction);
-
-                recordRepository.save(new Record(transaction.getKey(), transaction.getValue()));
-
-                actual.onNext(ResponseEntity
-                        .status(HttpStatus.OK)
-                        .body("Stored " + transaction.toString()));
-
-                actual.onComplete();
             }
 
             private void handleRollBackResult(Boolean RollBack) {
@@ -210,8 +222,8 @@ public class APProtocolService implements ProtocolService {
 
             private void handleError(Throwable error) {
                 actual.onNext(ResponseEntity
-                        .status(HttpStatus.INTERNAL_SERVER_ERROR)
-                        .build());
+                        .status(HttpStatus.REQUEST_TIMEOUT)
+                        .body(error.getMessage()));
                 actual.onComplete();
             }
         };

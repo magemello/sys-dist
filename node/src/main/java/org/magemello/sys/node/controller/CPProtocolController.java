@@ -1,6 +1,7 @@
 package org.magemello.sys.node.controller;
 
 import org.magemello.sys.node.domain.Record;
+import org.magemello.sys.node.domain.Transaction;
 import org.magemello.sys.node.service.APProtocolService;
 import org.magemello.sys.node.service.CPProtocolService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -8,12 +9,14 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController()
 @RequestMapping("cp")
 public class CPProtocolController {
 
-//    @Autowired
-//    private CPProtocolService cpProtocolService;
+    @Autowired
+    private CPProtocolService cpProtocolService;
 //
 //    @PostMapping("update")
 //    public ResponseEntity<String> update(@RequestBody Record record) {
@@ -26,12 +29,12 @@ public class CPProtocolController {
 //    }
 //
 //    @GetMapping("history")
-//    public ResponseEntity<Record> history() {
+//    public ResponseEntity<List<Record>> history() {
 //    }
 
-//    private boolean isAValidTransaction(@RequestBody Record record) {
-//        return record != null && record.getKey() != null && record.get_ID() != null;
-//    }
+    private boolean isAValidTransaction(@RequestBody Transaction transaction) {
+        return transaction != null && transaction.getKey() != null && transaction.get_ID() != null;
+    }
 
     private ResponseEntity<String> createResponse(String message, HttpStatus status) {
         return ResponseEntity

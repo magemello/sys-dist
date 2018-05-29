@@ -117,8 +117,8 @@ public class ACProtocolService implements ProtocolService {
                 this.actual = actual;
 
                 acProtocolClient.propose(transaction)
-                        .doOnError(this::handleError).log("Error -> Sending rollback to peers")
-                        .subscribe(this::handleProposeResult);
+                        .subscribe(this::handleProposeResult
+                                , this::handleError);
             }
 
             private void handleProposeResult(List<ClientResponse> clientResponses) {
@@ -127,16 +127,16 @@ public class ACProtocolService implements ProtocolService {
                     log.info("Propose for {} succeed sending commit to peers", transaction);
 
                     acProtocolClient.commit(transaction.get_ID())
-                            .doOnError(this::handleError).log("Error executing commit")
-                            .subscribe(this::handleCommitResult);
+                            .subscribe(this::handleCommitResult
+                                    , this::handleError);
                 } else {
                     log.error("Propose for {} failed sending rollback to peers", transaction);
 
                     acProtocolClient
                             .rollback(transaction.get_ID(),
                                     clientResponses)
-                            .doOnError(this::handleError).log("Error executing rollback")
-                            .subscribe(this::handleRollBackResult);
+                            .subscribe(this::handleRollBackResult
+                                    , this::handleError);
                 }
             }
 
@@ -167,7 +167,7 @@ public class ACProtocolService implements ProtocolService {
             private void handleError(Throwable error) {
                 actual.onNext(ResponseEntity
                         .status(HttpStatus.INTERNAL_SERVER_ERROR)
-                        .build());
+                        .body(error.getMessage()));
                 actual.onComplete();
             }
         };

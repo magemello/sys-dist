@@ -26,20 +26,20 @@ public class APProtocolClient {
     @Autowired
     private P2PService p2pService;
 
-
     public Mono<List<ClientResponse>> propose(Transaction transaction) {
         return Flux.fromIterable(p2pService.getPeers())
                 .flatMap(peer -> createWebClientPropose(transaction, peer), p2pService.getPeers().size())
                 .timeout(Duration.ofSeconds(clientTimeout))
-                .onErrorResume(throwable -> Mono.just(ClientResponse.create(HttpStatus.REQUEST_TIMEOUT).build())).collectList();
+                .onErrorResume(throwable -> Mono.just(ClientResponse.create(HttpStatus.REQUEST_TIMEOUT).build()))
+                .collectList();
     }
 
-    public Mono<Long> commit(String id) {
+    public Flux<ClientResponse> commit(String id) {
         return Flux.fromIterable(p2pService.getPeers())
                 .flatMap(peer -> createWebClientCommit(id, peer), p2pService.getPeers().size())
                 .timeout(Duration.ofSeconds(clientTimeout))
-                .filter(response -> !response.statusCode().isError())
-                .count();
+                .onErrorResume(throwable -> Mono.just(ClientResponse.create(HttpStatus.REQUEST_TIMEOUT).build()))
+                .filter(response -> !response.statusCode().isError());
     }
 
     public Mono<Boolean> rollback(String id, List<ClientResponse> clientResponses) {
@@ -60,6 +60,7 @@ public class APProtocolClient {
         return Flux.fromIterable(peers)
                 .flatMap(peer -> createWebClientRepair(record, peer), p2pService.getPeers().size())
                 .timeout(Duration.ofSeconds(clientTimeout))
+                .onErrorResume(throwable -> Mono.just(ClientResponse.create(HttpStatus.REQUEST_TIMEOUT).build()))
                 .all(response -> !response.statusCode().isError());
     }
 
