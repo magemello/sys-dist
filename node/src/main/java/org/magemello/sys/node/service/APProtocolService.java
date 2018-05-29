@@ -44,14 +44,14 @@ public class APProtocolService implements ProtocolService {
     public Mono<ResponseEntity> get(String key) {
         log.info("AP Service - get for {} ", key);
 
-        List<ClientResponse> clientResponses = apProtocolClient.read(key).collectList().block();
+        List<ResponseEntity<Record>> responseEntity = apProtocolClient.read(key).collectList().block();
 
-        Map.Entry<Record, Integer> entryRecord = getEntryRecordWithHighestQuorum(clientResponses, key);
+        Map.Entry<Record, Integer> entryRecord = getEntryRecordWithHighestQuorum(responseEntity, key);
 
-        Record record = entryRecord.getKey();
+        if (entryRecord != null && entryRecord.getKey() != null) {
+            Record record = entryRecord.getKey();
 
-        if (record != null) {
-            sendRepair(clientResponses, record);
+            sendRepair(responseEntity, record);
 
             if (entryRecord.getValue() >= readQuorum) {
                 return Mono.just(ResponseEntity
@@ -67,12 +67,15 @@ public class APProtocolService implements ProtocolService {
         }
     }
 
-    private void sendRepair(List<ClientResponse> clientResponses, Record record) {
-        apProtocolClient.repair(clientResponses, record).subscribe(aBoolean -> {
-            log.info("Repair outcome " + aBoolean);
+    private void sendRepair(List<ResponseEntity<Record>> responseEntity, Record record) {
+        apProtocolClient.repair(responseEntity, record).subscribe(clientResponse -> {
+            log.info("AP Service - Repair {} status {}",
+                    clientResponse.headers().header("x-sys-ip").stream().findFirst().get(),
+                    clientResponse.statusCode());
         });
 
-        if (!recordRepository.findByKey(record.getKey()).equals(record)) {
+        Record localRecord = recordRepository.findByKey(record.getKey());
+        if (localRecord == null || !localRecord.equals(record)) {
             recordRepository.save(record);
         }
     }
@@ -97,13 +100,14 @@ public class APProtocolService implements ProtocolService {
 
 
     public boolean propose(Transaction transaction) {
-        log.info("AP Service - Propose for {} ", transaction);
-
-        if (isAProposalPresentFor(transaction.getKey())) {
+        if (!isAProposalPresentFor(transaction.getKey())) {
+            log.info("- accepted proposal {} for key {}", transaction.get_ID(), transaction.getKey());
             writeAheadLog.put(transaction.get_ID(), transaction);
             return true;
+        } else {
+            log.info("- refused proposal {} for key {} (already present)", transaction.get_ID(), transaction.getKey());
+            return false;
         }
-        return false;
     }
 
     public Record commit(String id) {
@@ -203,7 +207,7 @@ public class APProtocolService implements ProtocolService {
                 Integer quorum = commitQuorum.get();
 
                 if (quorum >= writeQuorum) {
-                    log.info("Commit for {} succeed, quorum of {} on {}, sending commit to peers", transaction, quorum, writeQuorum);
+                    log.info("Commit for {} succeed, quorum of {} on {} needed", transaction, quorum, writeQuorum);
                 } else {
                     log.info("Commit for {} failed, quorum of {} on {} needed", transaction, quorum, writeQuorum);
 
@@ -229,19 +233,19 @@ public class APProtocolService implements ProtocolService {
         };
     }
 
-    private List<Record> getPeersRecords(List<ClientResponse> clientResponses, String key) {
-        List<Record> records = clientResponsesToRecords(clientResponses);
+    private List<Record> getPeersRecords(List<ResponseEntity<Record>> responseEntity, String key) {
+        List<Record> records = responseEntityToRecords(responseEntity);
         records.add(recordRepository.findByKey(key));
         return records;
     }
 
-    private List<Record> clientResponsesToRecords(List<ClientResponse> clientResponses) {
-        return clientResponses.stream().map(clientResponseFromStream -> clientResponseFromStream.bodyToMono(Record.class).block())
+    private List<Record> responseEntityToRecords(List<ResponseEntity<Record>> responseEntity) {
+        return responseEntity.stream().map(responseEntityFromStream -> responseEntityFromStream.getBody())
                 .collect(Collectors.toList());
     }
 
-    private Map.Entry<Record, Integer> getEntryRecordWithHighestQuorum(List<ClientResponse> clientResponses, String key) {
-        List<Record> records = getPeersRecords(clientResponses, key);
+    private Map.Entry<Record, Integer> getEntryRecordWithHighestQuorum(List<ResponseEntity<Record>> responseEntity, String key) {
+        List<Record> records = getPeersRecords(responseEntity, key);
 
         Map<Record, Integer> matches = new HashMap<>();
 
@@ -263,7 +267,11 @@ public class APProtocolService implements ProtocolService {
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue,
                         (oldValue, newValue) -> oldValue, LinkedHashMap::new));
 
-        return result.entrySet().iterator().next();
+        if (result.entrySet().size() > 0) {
+            return result.entrySet().iterator().next();
+        }
+
+        return null;
     }
 
     private boolean isAProposalPresentFor(String key) {
@@ -276,7 +284,7 @@ public class APProtocolService implements ProtocolService {
     @Override
     public void start() {
         log.info("AP mode (sloppy quorums)");
-        
+
     }
 
     @Override
