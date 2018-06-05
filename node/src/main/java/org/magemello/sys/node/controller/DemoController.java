@@ -50,7 +50,7 @@ public class DemoController {
 
     @GetMapping("/clean")
     public ResponseEntity<?> cleanScreen() {
-        protocolService.reset();
+        protocolService.onCleanup();
         
         for(int i=0; i<100; i++) {
             log.info("");

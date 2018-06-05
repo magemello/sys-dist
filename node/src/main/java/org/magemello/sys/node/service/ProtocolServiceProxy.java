@@ -85,8 +85,8 @@ public class ProtocolServiceProxy implements ProtocolService {
     }
 
     @Override
-    public void reset() {
-        current.reset();
+    public void onCleanup() {
+        current.onCleanup();
     }
 
     @Override

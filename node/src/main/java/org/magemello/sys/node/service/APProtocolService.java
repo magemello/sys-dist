@@ -89,7 +89,7 @@ public class APProtocolService implements ProtocolService {
     }
 
     @Override
-    public void reset() {
+    public void onCleanup() {
         writeAheadLog.clear();
     }
 

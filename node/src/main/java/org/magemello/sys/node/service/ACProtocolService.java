@@ -54,7 +54,7 @@ public class ACProtocolService implements ProtocolService {
     }
 
     @Override
-    public void reset() {
+    public void onCleanup() {
         writeAheadLog.clear();
     }
 
