@@ -1,6 +1,6 @@
 package org.magemello.sys.node.controller;
 
-import org.magemello.sys.node.domain.Vote;
+import org.magemello.sys.node.domain.VoteRequest;
 import org.magemello.sys.node.service.CPProtocolService;
 import org.magemello.sys.protocol.raft.Raft;
 import org.magemello.sys.protocol.raft.Update;
@@ -30,7 +30,7 @@ public class CPProtocolController {
     }
 
     @PostMapping("voteforme")
-    public ResponseEntity<String> voteforme(@RequestBody Vote vote) {
+    public ResponseEntity<String> voteforme(@RequestBody VoteRequest vote) {
         if (isAValidVote(vote)) {
             log.info("/vote request for {} term {}", vote.getPort(), vote.getTerm());
 
@@ -48,7 +48,7 @@ public class CPProtocolController {
 //    public ResponseEntity<List<Record>> history() {
 //    }
 
-    private boolean isAValidVote(Vote vote) {
+    private boolean isAValidVote(VoteRequest vote) {
         return vote != null && vote.getPort() != null && vote.getTerm() != null;
     }
 

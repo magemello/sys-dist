@@ -4,15 +4,13 @@ import static org.magemello.sys.protocol.raft.Utils.DEFAULT_TICK_TIMEOUT;
 import static org.magemello.sys.protocol.raft.Utils.randomize;
 
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 import org.magemello.sys.node.clients.CPProtocolClient;
-import org.magemello.sys.node.domain.Vote;
+import org.magemello.sys.node.domain.VoteRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -38,7 +36,7 @@ public class Raft {
         this.votes = new VotingBoard();
     }
     
-    public boolean handleVoteRequest(Vote vote) {
+    public boolean handleVoteRequest(VoteRequest vote) {
         return votes.getVote(vote);
     }
     
@@ -47,10 +45,10 @@ public class Raft {
         if (success) {
             if (status == candidate) {
                 log.info("Ops! Somebody is already in charge, election aborted!");
-                switchStatus(follower);
+                switchToFollower();
             } else if (status == leader) {
                 log.info("Ops! Two leaders here? Let's start an election!");
-                startElection();
+                switchToCandidate();
             }
         }
         return success;
@@ -61,7 +59,7 @@ public class Raft {
         public void run() {
             if (epoch.isExpired()) {
                 log.info("No leader is present in term {}: time for an election!", epoch.getTerm());
-                startElection();
+                switchToCandidate();
             }
         }
         @Override
@@ -85,6 +83,13 @@ public class Raft {
         public void run() {
             epoch.nextTick();
             api.sendBeat(new Update(whoami, epoch, null));
+            
+            int responses = 0;
+            if (responses < quorum) {
+                log.info("It appears I have not enough followers, just {} responded to my update", responses);
+                switchToFollower();
+            }
+
         }
         @Override
         public String toString() {
@@ -92,11 +97,18 @@ public class Raft {
         }
     };
 
+    private void switchToFollower() {
+        switchStatus(follower);
+    }
 
-    private void startElection() {
+    private void switchToCandidate() {
         epoch = epoch.nextTerm();
         switchStatus(candidate);
-        api.requestVotes(whoami, epoch.getTerm());
+        Long total = api.requestVotes(whoami, epoch.getTerm());
+        if (total >= quorum) {
+            log.info("I was elected leader!!!");
+            switchStatus(leader);
+        }
     }
     
     private void switchStatus(Runnable newStatus) {
@@ -136,26 +148,16 @@ public class Raft {
 
 class VotingBoard {
 
-    private Map<Integer, Set<Integer>> board = new HashMap<>();
+    private Map<Integer, Integer> board = new HashMap<>();
 
-    public synchronized boolean getVote(Vote vote) {
-        Set<Integer> votes = getVotesForTerm(vote.getTerm());
-
-        if (!votes.contains(vote.getPort())) {
-            votes.add(vote.getPort());
+    public synchronized boolean getVote(VoteRequest voteRequest) {
+        Integer vote = board.get(voteRequest.getTerm());
+        if (vote == null) {
+            board.put(voteRequest.getTerm(), voteRequest.getPort());
             return true;
         } else {
             return false;
         }
-    }
-
-    private synchronized Set<Integer> getVotesForTerm(Integer term) {
-        Set<Integer> votes = board.get(term);
-        if (votes == null) {
-            votes = new HashSet<>();
-            board.put(term, votes);
-        }
-        return votes;
-    }
+   }
     
 }

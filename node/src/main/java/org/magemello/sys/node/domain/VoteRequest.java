@@ -1,15 +1,15 @@
 package org.magemello.sys.node.domain;
 
-public class Vote {
+public class VoteRequest {
 
     private Integer port;
 
     private Integer term;
 
-    public Vote() {
+    public VoteRequest() {
     }
 
-    public Vote(Integer port, Integer term) {
+    public VoteRequest(Integer port, Integer term) {
         this.port = port;
         this.term = term;
     }

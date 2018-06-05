@@ -8,7 +8,7 @@ import java.util.concurrent.TimeUnit;
 
 import org.magemello.sys.node.clients.CPProtocolClient;
 import org.magemello.sys.node.domain.Record;
-import org.magemello.sys.node.domain.Vote;
+import org.magemello.sys.node.domain.VoteRequest;
 import org.magemello.sys.node.repository.RecordRepository;
 import org.magemello.sys.protocol.raft.Epoch;
 import org.magemello.sys.protocol.raft.Raft;
@@ -71,7 +71,7 @@ public class CPProtocolService implements ProtocolService {
         raft.stop();
     }
 
-    public boolean vote(Vote vote) {
+    public boolean vote(VoteRequest vote) {
         return raft.handleVoteRequest(vote);
     }
 

@@ -24,7 +24,7 @@ public class ProtocolServiceProxy implements ProtocolService {
     public static final String AP = "AP";
     public static final String AC = "AC";
     
-    @Value("${protocol:"+AC+"}")
+    @Value("${protocol:"+CP+"}")
     private String protocol;
 
     @Autowired

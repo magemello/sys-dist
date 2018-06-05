@@ -1,6 +1,6 @@
 package org.magemello.sys.node.clients;
 
-import org.magemello.sys.node.domain.Vote;
+import org.magemello.sys.node.domain.VoteRequest;
 import org.magemello.sys.node.service.P2PService;
 import org.magemello.sys.protocol.raft.Update;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -37,7 +37,7 @@ public class CPProtocolClient {
                 .post()
                 .uri("http://" + peer + "/cp/voteforme")
                 .accept(MediaType.APPLICATION_JSON)
-                .syncBody(new Vote(whoami, term))
+                .syncBody(new VoteRequest(whoami, term))
                 .exchange()
                 .onErrorResume(throwable -> Mono.just(ClientResponse.create(HttpStatus.BAD_GATEWAY).build()));
     }
