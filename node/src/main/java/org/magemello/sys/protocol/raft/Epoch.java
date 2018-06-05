@@ -7,8 +7,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class Epoch {
-
-    public enum Result {allgood, discard, restart};
     
     private static final Logger log = LoggerFactory.getLogger(Epoch.class);
 
@@ -22,22 +20,23 @@ public class Epoch {
         updateExpiryTime();
     }
     
-    public Result handleTick(Update update) {
+    public boolean update(Update update) {
         if (update.term < term || update.term == term && update.tick <= tick) {
             log.debug("Received a too old term {}, we are in {}", update.term, term);
-            return Result.discard;
+            return false;
         }
         
         if (update.term > term) {
             log.debug("Received a tick in the future - need to restart!");
-            return Result.restart;
+            return false;
         }
+
         
         this.tick = update.tick;
         this.leader = update.from;
         updateExpiryTime();
-
-        return Result.allgood;
+        
+        return true;
     }
 
     public int getTerm() {
