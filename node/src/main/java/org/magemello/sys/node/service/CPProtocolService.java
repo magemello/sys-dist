@@ -64,10 +64,22 @@ public class CPProtocolService implements ProtocolService {
     }
 
     public boolean vote(VoteRequest vote) {
-        return raft.handleVoteRequest(vote);
+        if (raft.handleVoteRequest(vote)) {
+            log.info("- Voting yes)");
+            return true;
+        } else {
+            log.info("- Voting no)");
+            return false;
+        }
     }
 
     public boolean beat(Update update) {
-        return raft.handleBeat(update);
+        if (raft.handleBeat(update)) {
+            log.info("- Update succeed)");
+            return true;
+        } else {
+            log.info("- Update failed)");
+            return false;
+        }
     }
 }

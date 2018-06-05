@@ -21,6 +21,8 @@ public class CPProtocolController {
 
     @PostMapping("update")
     public ResponseEntity<String> update(@RequestBody Update update) {
+        log.info("/update {} ", update.toString());
+
         if (cpProtocolService.beat(update)) {
             return createResponse("CP RAFT Update - Update success: " + update.toString(), HttpStatus.OK);
         } else {
@@ -32,27 +34,15 @@ public class CPProtocolController {
     public ResponseEntity<String> voteforme(@RequestBody VoteRequest vote) {
         log.info("/vote request for {} ", vote.toString());
 
-        if (isAValidVote(vote)) {
-            if (cpProtocolService.vote(vote)) {
-                return createResponse("CP RAFT Vote - Voting yes: " + vote.toString(), HttpStatus.OK);
-            } else {
-                return createResponse("CP RAFT Vote - Voting no: " + vote.toString(), HttpStatus.NOT_FOUND);
-            }
+        if (cpProtocolService.vote(vote)) {
+            return createResponse("CP RAFT Vote - Voting yes: " + vote.toString(), HttpStatus.OK);
         } else {
-            return createResponse("CP RAFT Vote - Refused vote for" + vote.toString(), HttpStatus.BAD_REQUEST);
+            return createResponse("CP RAFT Vote - Voting no: " + vote.toString(), HttpStatus.NOT_FOUND);
         }
     }
 //
 //    @GetMapping("history")
 //    public ResponseEntity<List<Record>> history() {
-//    }
-
-    private boolean isAValidVote(VoteRequest vote) {
-        return vote != null && vote.getPort() != null && vote.getTerm() != null;
-    }
-
-//    private boolean isAValidTransaction(@RequestBody Transaction transaction) {
-//        return transaction != null && transaction.getKey() != null && transaction.get_ID() != null;
 //    }
 
     private ResponseEntity<String> createResponse(String message, HttpStatus status) {
