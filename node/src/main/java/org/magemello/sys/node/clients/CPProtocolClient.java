@@ -24,12 +24,12 @@ public class CPProtocolClient {
     @Value("${client.timeout:3}")
     private Integer clientTimeout;
 
-    public Long requestVotes(Integer whoami, Integer term) {
+    public Flux<ClientResponse> requestVotes(Integer whoami, Integer term) {
         return Flux.fromIterable(p2pService.getPeers())
                 .flatMap(peer -> createWebClientVote(whoami, term, peer), p2pService.getPeers().size())
                 .timeout(Duration.ofMillis(clientTimeout))
                 .onErrorResume(throwable -> Mono.just(ClientResponse.create(HttpStatus.REQUEST_TIMEOUT).build()))
-                .filter(response -> !response.statusCode().isError()).count().block();
+                .filter(response -> !response.statusCode().isError());
     }
 
     private Mono<ClientResponse> createWebClientVote(Integer whoami, Integer term, String peer) {

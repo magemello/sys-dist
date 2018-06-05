@@ -4,15 +4,24 @@ import static org.magemello.sys.protocol.raft.Utils.DEFAULT_TICK_TIMEOUT;
 import static org.magemello.sys.protocol.raft.Utils.randomize;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.magemello.sys.node.clients.CPProtocolClient;
+import org.magemello.sys.node.domain.Record;
 import org.magemello.sys.node.domain.VoteRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.reactive.function.client.ClientResponse;
+import reactor.core.CoreSubscriber;
+import reactor.core.publisher.Mono;
 
 public class Raft {
 
@@ -21,7 +30,7 @@ public class Raft {
     private final int whoami;
     private final int quorum;
     private final CPProtocolClient api;
-    
+
     private volatile Epoch epoch;
     private volatile Runnable status;
 
@@ -35,11 +44,11 @@ public class Raft {
         this.status = follower;
         this.votes = new VotingBoard();
     }
-    
+
     public boolean handleVoteRequest(VoteRequest vote) {
         return votes.getVote(vote);
     }
-    
+
     public boolean handleBeat(Update update) {
         boolean success = epoch.update(update);
         if (success) {
@@ -53,7 +62,7 @@ public class Raft {
         }
         return success;
     }
-    
+
     private Runnable follower = new Runnable() {
         @Override
         public void run() {
@@ -62,6 +71,7 @@ public class Raft {
                 switchToCandidate();
             }
         }
+
         @Override
         public String toString() {
             return "follower";
@@ -72,6 +82,7 @@ public class Raft {
         @Override
         public void run() {
         }
+
         @Override
         public String toString() {
             return "candidate";
@@ -83,7 +94,7 @@ public class Raft {
         public void run() {
             epoch.nextTick();
             api.sendBeat(new Update(whoami, epoch, null));
-            
+
             int responses = 0;
             if (responses < quorum) {
                 log.info("It appears I have not enough followers, just {} responded to my update", responses);
@@ -91,6 +102,7 @@ public class Raft {
             }
 
         }
+
         @Override
         public String toString() {
             return "leader";
@@ -104,13 +116,43 @@ public class Raft {
     private void switchToCandidate() {
         epoch = epoch.nextTerm();
         switchStatus(candidate);
-        Long total = api.requestVotes(whoami, epoch.getTerm());
-        if (total >= quorum) {
-            log.info("I was elected leader!!!");
-            switchStatus(leader);
-        }
+
+
+        handleVote(whoami, epoch.getTerm());
     }
-    
+
+    private Mono<ResponseEntity> handleVote(Integer whoami, Integer term) {
+        return new Mono<ResponseEntity>() {
+
+            private CoreSubscriber<? super ResponseEntity> actual;
+
+            AtomicInteger voteQuorum = new AtomicInteger(0);
+
+            @Override
+            public void subscribe(CoreSubscriber<? super ResponseEntity> actual) {
+                log.info("Sending vote for request to peers");
+
+                this.actual = actual;
+
+                api.requestVotes(whoami, term)
+                        .map(this::manageRequestVoteQuorum).collectList()
+                        .doFinally(signalType -> actual.onComplete());
+            }
+
+            private ClientResponse manageRequestVoteQuorum(ClientResponse clientResponse) {
+                if (!clientResponse.statusCode().isError()) {
+                    if (voteQuorum.incrementAndGet() >= quorum) {
+                        log.info("I was elected leader!!!");
+                        switchStatus(leader);
+                        actual.onComplete();
+                    }
+                }
+
+                return clientResponse;
+            }
+        };
+    }
+
     private void switchStatus(Runnable newStatus) {
         log.info("Switching from status {} to status {}", status, newStatus);
         newStatus = status;
@@ -132,7 +174,7 @@ public class Raft {
     }
 
     private void scheduleNext(ScheduledExecutorService scheduler, Runnable runnable) {
-        scheduler.schedule(runnable, randomize(DEFAULT_TICK_TIMEOUT/2), TimeUnit.MILLISECONDS);
+        scheduler.schedule(runnable, randomize(DEFAULT_TICK_TIMEOUT / 2), TimeUnit.MILLISECONDS);
     }
 
     public void stop() {
@@ -158,6 +200,6 @@ class VotingBoard {
         } else {
             return false;
         }
-   }
-    
+    }
+
 }
