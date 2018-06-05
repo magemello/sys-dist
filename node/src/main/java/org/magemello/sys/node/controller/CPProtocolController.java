@@ -2,6 +2,7 @@ package org.magemello.sys.node.controller;
 
 import org.magemello.sys.node.domain.Vote;
 import org.magemello.sys.node.service.CPProtocolService;
+import org.magemello.sys.protocol.raft.Raft;
 import org.magemello.sys.protocol.raft.Update;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -19,10 +20,13 @@ public class CPProtocolController {
     @Autowired
     private CPProtocolService cpProtocolService;
 
-
     @PostMapping("update")
     public ResponseEntity<String> update(@RequestBody Update update) {
-
+        if (cpProtocolService.beat(update)) {
+            return createResponse("CP RAFT Update - Update success: " + update.toString(), HttpStatus.OK);
+        } else {
+            return createResponse("CP RAFT Update - Update failed: " + update.toString(), HttpStatus.NOT_FOUND);
+        }
     }
 
     @PostMapping("voteforme")

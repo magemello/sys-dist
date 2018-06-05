@@ -8,9 +8,11 @@ import java.util.concurrent.TimeUnit;
 
 import org.magemello.sys.node.clients.CPProtocolClient;
 import org.magemello.sys.node.domain.Record;
+import org.magemello.sys.node.domain.Vote;
 import org.magemello.sys.node.repository.RecordRepository;
 import org.magemello.sys.protocol.raft.Epoch;
 import org.magemello.sys.protocol.raft.Raft;
+import org.magemello.sys.protocol.raft.Update;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -59,7 +61,7 @@ public class CPProtocolService implements ProtocolService {
     @Override
     public void start() {
         log.info("CP mode (majority quorum, raft)");
-        int majority = 1+p2pService.getPeers().size()/2;
+        int majority = 1 + p2pService.getPeers().size() / 2;
         raft = new Raft(Integer.parseInt(serverPort), client, majority);
         raft.start();
     }
@@ -69,4 +71,11 @@ public class CPProtocolService implements ProtocolService {
         raft.stop();
     }
 
+    public boolean vote(Vote vote) {
+        return raft.handleVoteRequest(vote);
+    }
+
+    public boolean beat(Update update) {
+        return raft.handleBeat(update);
+    }
 }
