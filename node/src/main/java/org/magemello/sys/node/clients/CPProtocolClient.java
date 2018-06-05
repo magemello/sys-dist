@@ -1,31 +1,50 @@
 package org.magemello.sys.node.clients;
 
+import org.magemello.sys.node.domain.Vote;
 import org.magemello.sys.node.service.P2PService;
-import org.magemello.sys.protocol.raft.Epoch;
 import org.magemello.sys.protocol.raft.Update;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
+import org.springframework.web.reactive.function.client.ClientResponse;
+import org.springframework.web.reactive.function.client.WebClient;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+
+import java.time.Duration;
 
 @Service
 public class CPProtocolClient {
 
-    private static final Logger log = LoggerFactory.getLogger(CPProtocolClient.class);
-
     @Autowired
     private P2PService p2pService;
 
-    public int requestVotes(int whoami) {
-        // this call should send a vote request to all the peers
-        // for each peer answering, a vote is awarded
-        // the total number of received votes is returned
-        // a timeout in a call means a negative vote
-        return 0;
+    @Value("${client.timeout:3}")
+    private Integer clientTimeout;
+
+    public Long requestVotes(Integer whoami, Integer term) {
+        return Flux.fromIterable(p2pService.getPeers())
+                .flatMap(peer -> createWebVote(whoami, term, peer), p2pService.getPeers().size())
+                .timeout(Duration.ofMillis(clientTimeout))
+                .onErrorResume(throwable -> Mono.just(ClientResponse.create(HttpStatus.REQUEST_TIMEOUT).build()))
+                .filter(response -> !response.statusCode().isError()).count().block();
     }
+
+    private Mono<ClientResponse> createWebVote(Integer whoami, Integer term, String peer) {
+        return WebClient.create()
+                .post()
+                .uri("http://" + peer + "/cp/voteforme")
+                .accept(MediaType.APPLICATION_JSON)
+                .syncBody(new Vote(whoami, term))
+                .exchange()
+                .onErrorResume(throwable -> Mono.just(ClientResponse.create(HttpStatus.BAD_GATEWAY).build()));
+    }
+
 
     public void sendBeat(Update update) {
         // TODO Auto-generated method stub
-        
+
     }
 }
