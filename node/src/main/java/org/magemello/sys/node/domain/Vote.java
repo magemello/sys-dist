@@ -2,9 +2,9 @@ package org.magemello.sys.node.domain;
 
 public class Vote {
 
-    Integer port;
+    private Integer port;
 
-    Integer term;
+    private Integer term;
 
     public Vote() {
     }
