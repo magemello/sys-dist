@@ -116,7 +116,9 @@ public class Raft {
         switchStatus(candidate);
 
 
-        handleVote(whoami, epoch.getTerm());
+        handleVote(whoami, epoch.getTerm()).subscribe(responseEntity -> {
+            log.info("- Vote request complete");
+        });
     }
 
     private Mono<ResponseEntity> handleVote(Integer whoami, Integer term) {
