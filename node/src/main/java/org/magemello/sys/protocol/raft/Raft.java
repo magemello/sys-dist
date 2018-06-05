@@ -115,7 +115,6 @@ public class Raft {
         epoch = epoch.nextTerm();
         switchStatus(candidate);
 
-
         handleVote(whoami, epoch.getTerm()).subscribe(responseEntity -> {
             log.info("- Vote request complete");
         });
@@ -136,7 +135,7 @@ public class Raft {
 
                 api.requestVotes(whoami, term)
                         .map(this::manageRequestVoteQuorum).collectList()
-                        .doFinally(signalType -> actual.onComplete());
+                        .subscribe(signalType -> actual.onComplete());
             }
 
             private ClientResponse manageRequestVoteQuorum(ClientResponse clientResponse) {
