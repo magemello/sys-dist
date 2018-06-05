@@ -1,16 +1,8 @@
 package org.magemello.sys.node.service;
 
-import static org.magemello.sys.protocol.raft.Utils.*;
-
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
-
 import org.magemello.sys.node.clients.CPProtocolClient;
-import org.magemello.sys.node.domain.Record;
 import org.magemello.sys.node.domain.VoteRequest;
 import org.magemello.sys.node.repository.RecordRepository;
-import org.magemello.sys.protocol.raft.Epoch;
 import org.magemello.sys.protocol.raft.Raft;
 import org.magemello.sys.protocol.raft.Update;
 import org.slf4j.Logger;
