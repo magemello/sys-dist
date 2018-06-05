@@ -4,22 +4,19 @@ import static org.magemello.sys.protocol.raft.Utils.DEFAULT_TICK_TIMEOUT;
 import static org.magemello.sys.protocol.raft.Utils.randomize;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.magemello.sys.node.clients.CPProtocolClient;
-import org.magemello.sys.node.domain.Record;
 import org.magemello.sys.node.domain.VoteRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.reactive.function.client.ClientResponse;
+
 import reactor.core.CoreSubscriber;
 import reactor.core.publisher.Mono;
 
@@ -46,6 +43,7 @@ public class Raft {
     }
 
     public boolean handleVoteRequest(VoteRequest vote) {
+        epoch.touch();
         return votes.getVote(vote);
     }
 
@@ -142,7 +140,7 @@ public class Raft {
             private ClientResponse manageRequestVoteQuorum(ClientResponse clientResponse) {
                 if (!clientResponse.statusCode().isError()) {
                     if (voteQuorum.incrementAndGet() >= quorum) {
-                        log.info("I was elected leader!!!");
+                        log.info("I was elected leader for term {}!", term);
                         switchStatus(leader);
                         actual.onComplete();
                     }

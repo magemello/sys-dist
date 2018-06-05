@@ -17,7 +17,7 @@ public class Epoch {
     
     public Epoch(int number) {
         this.term = number;
-        updateExpiryTime();
+        touch();
     }
     
     public boolean update(Update update) {
@@ -34,7 +34,7 @@ public class Epoch {
         
         this.tick = update.tick;
         this.leader = update.from;
-        updateExpiryTime();
+        touch();
         
         return true;
     }
@@ -64,7 +64,7 @@ public class Epoch {
         }
     }
 
-    private void updateExpiryTime() {
+    public void touch() {
         this.end = System.currentTimeMillis() + randomize(DEFAULT_ELECTION_TIMEOUT);
     }
 
