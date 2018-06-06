@@ -92,11 +92,8 @@ public class Raft {
         public void run() {
             epoch.nextTick();
             log.info("Sending beat, term {}, tick {}", epoch.getTerm(), epoch.getTick());
-            api.sendBeat(new Update(whoami, epoch, null));
-
-            int responses = 0;
-            if (responses < quorum) {
-                log.info("It appears I have not enough followers, just {} responded to my update", responses);
+            if (!api.sendBeat(new Update(whoami, epoch, null), quorum)) {
+                log.info("It appears I have not enough followers :(");
                 switchToFollower();
             }
 
@@ -179,7 +176,6 @@ public class Raft {
 
     public void stop() {
         status = null;
-
         try {
             Thread.sleep(DEFAULT_TICK_TIMEOUT);
         } catch (InterruptedException e) {
