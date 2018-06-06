@@ -71,8 +71,14 @@ public class Raft {
     };
 
     private Runnable candidate = new Runnable() {
+        private int count;
+        
         @Override
         public void run() {
+            if (++count%10 == 0) {
+                log.info("Nothing happening, let's try another election!");
+                switchToCandidate();
+            }
         }
 
         @Override
@@ -121,8 +127,10 @@ public class Raft {
 
 
     private void switchStatus(Runnable newStatus) {
-        log.info("Switching from status {} to status {}", status, newStatus);
-        status = newStatus;
+        if (status != newStatus) {
+            log.info("Switching from status {} to status {}", status, newStatus);
+            status = newStatus;
+        }
     }
 
     public void start() {
