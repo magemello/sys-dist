@@ -8,18 +8,11 @@ import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
 
 import org.magemello.sys.node.clients.CPProtocolClient;
 import org.magemello.sys.node.domain.VoteRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.reactive.function.client.ClientResponse;
-
-import reactor.core.CoreSubscriber;
-import reactor.core.publisher.Mono;
 
 public class Raft {
 
@@ -48,8 +41,8 @@ public class Raft {
         return votes.getVote(vote);
     }
 
-    public boolean handleBeat(Update update) {
-        boolean success = epoch.update(update);
+    public boolean handleBeat(Update beat) {
+        boolean success = epoch.update(beat);
         if (success) {
             if (status == candidate) {
                 log.info("Ops! Somebody is already in charge, election aborted!");
@@ -94,7 +87,7 @@ public class Raft {
             epoch.nextTick();
             log.info("Sending beat, term {}, tick {}", epoch.getTerm(), epoch.getTick());
 
-            handleBeat(new Update(whoami, epoch, null), epoch.getTerm()).subscribe(beatQuorum -> {
+            api.sendBeat(new Update(whoami, epoch, null), quorum).subscribe(beatQuorum -> {
                 if (beatQuorum < quorum) {
                     log.info("It appears I have not enough followers :( for term {}", epoch.getTerm());
                     switchToFollower();
@@ -110,39 +103,6 @@ public class Raft {
         }
     };
 
-    private Mono<Long> handleBeat(Update update, Integer term) {
-        return new Mono<Long>() {
-
-            private CoreSubscriber<? super Long> actual;
-
-            AtomicLong responseQuorum = new AtomicLong(0);
-
-            @Override
-            public void subscribe(CoreSubscriber<? super Long> actual) {
-                log.info("Sending vote for request to peers");
-
-                this.actual = actual;
-
-                api.sendBeat(update)
-                        .map(this::manageUpdateQuorum)
-                        .count()
-                        .subscribe(quorum -> {
-                            actual.onNext(quorum);
-                            actual.onComplete();
-                        });
-            }
-
-            private ClientResponse manageUpdateQuorum(ClientResponse clientResponse) {
-                Long currentQuorum = responseQuorum.incrementAndGet();
-                if (currentQuorum >= quorum) {
-                    actual.onNext(currentQuorum);
-                    actual.onComplete();
-                }
-
-                return clientResponse;
-            }
-        };
-    }
 
     private void switchToFollower() {
         switchStatus(follower);
@@ -150,9 +110,10 @@ public class Raft {
 
     private void switchToCandidate() {
         epoch = epoch.nextTerm();
+        votes.put(epoch.getTerm(), whoami);
         switchStatus(candidate);
 
-        handleVote(whoami, epoch.getTerm()).subscribe(voteQuorum -> {
+        api.requestVotes(whoami, epoch.getTerm(), quorum).subscribe(voteQuorum -> {
             if (voteQuorum >= quorum) {
                 log.info("I was elected leader for term {}!", epoch.getTerm());
                 switchStatus(leader);
@@ -160,40 +121,6 @@ public class Raft {
         });
     }
 
-    private Mono<Long> handleVote(Integer whoami, Integer term) {
-        return new Mono<Long>() {
-
-            private CoreSubscriber<? super Long> actual;
-
-            AtomicLong voteQuorum = new AtomicLong(0);
-
-            @Override
-            public void subscribe(CoreSubscriber<? super Long> actual) {
-                log.info("Sending vote for request to peers");
-
-                this.actual = actual;
-
-                api.requestVotes(whoami, term)
-                        .map(this::manageRequestVoteQuorum)
-                        .count()
-                        .subscribe(quorum -> {
-                            actual.onNext(quorum);
-                            actual.onComplete();
-                        });
-            }
-
-            private ClientResponse manageRequestVoteQuorum(ClientResponse clientResponse) {
-                Long currentQuorum = voteQuorum.incrementAndGet();
-
-                if (currentQuorum >= quorum) {
-                    actual.onNext(currentQuorum);
-                    actual.onComplete();
-                }
-
-                return clientResponse;
-            }
-        };
-    }
 
     private void switchStatus(Runnable newStatus) {
         log.info("Switching from status {} to status {}", status, newStatus);
@@ -234,13 +161,18 @@ class VotingBoard {
     private Map<Integer, Integer> board = new HashMap<>();
 
     public synchronized boolean getVote(VoteRequest voteRequest) {
-        Integer vote = board.get(voteRequest.getTerm());
+        Integer term = voteRequest.getTerm();
+        Integer vote = board.get(term);
         if (vote == null) {
-            board.put(voteRequest.getTerm(), voteRequest.getPort());
+            put(term, voteRequest.getPort());
             return true;
         } else {
             return false;
         }
+    }
+
+    public void put(Integer term, Integer from) {
+        board.put(term, from);
     }
 
 }

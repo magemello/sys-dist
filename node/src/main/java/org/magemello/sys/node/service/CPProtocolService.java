@@ -1,6 +1,7 @@
 package org.magemello.sys.node.service;
 
 import org.magemello.sys.node.clients.CPProtocolClient;
+import org.magemello.sys.node.domain.Record;
 import org.magemello.sys.node.domain.VoteRequest;
 import org.magemello.sys.node.repository.RecordRepository;
 import org.magemello.sys.protocol.raft.Raft;
@@ -9,8 +10,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+
 import reactor.core.publisher.Mono;
 
 @Service("CP")
@@ -33,7 +36,13 @@ public class CPProtocolService implements ProtocolService {
 
     @Override
     public Mono<ResponseEntity> get(String key) {
-        return Mono.empty();
+        
+        Record record = recordRepository.findByKey(key);
+        if (record == null)
+            return Mono.just(ResponseEntity.status(HttpStatus.NOT_FOUND).build());
+        else
+            return Mono.just(ResponseEntity.status(HttpStatus.OK)
+                                           .body("QUORUM " + record.toString()));
     }
 
     @Override
@@ -64,22 +73,10 @@ public class CPProtocolService implements ProtocolService {
     }
 
     public boolean vote(VoteRequest vote) {
-        if (raft.handleVoteRequest(vote)) {
-            log.info("- Voting yes");
-            return true;
-        } else {
-            log.info("- Voting no");
-            return false;
-        }
+        return raft.handleVoteRequest(vote);
     }
 
     public boolean beat(Update update) {
-        if (raft.handleBeat(update)) {
-            log.info("- Update succeed");
-            return true;
-        } else {
-            log.info("- Update failed");
-            return false;
-        }
+        return raft.handleBeat(update);
     }
 }

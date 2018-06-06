@@ -21,25 +21,34 @@ public class CPProtocolController {
 
     @PostMapping("update")
     public ResponseEntity<String> update(@RequestBody Update update) {
-        log.info("/update {} ", update.toString());
-
+        ResponseEntity<String> res;
         if (cpProtocolService.beat(update)) {
-            return createResponse("CP RAFT Update - Update success: " + update.toString(), HttpStatus.OK);
+            res = createResponse("CP RAFT Update - Update success: " + update.toString(), HttpStatus.OK);
         } else {
-            return createResponse("CP RAFT Update - Update failed: " + update.toString(), HttpStatus.NOT_FOUND);
+            res =  createResponse("CP RAFT Update - Update failed: " + update.toString(), HttpStatus.NOT_FOUND);
         }
+
+        log.info("/update {}: {} ", update.toString(), asOkay(res, "good", "fail"));
+        return res;
     }
 
     @PostMapping("voteforme")
     public ResponseEntity<String> voteforme(@RequestBody VoteRequest vote) {
-        log.info("/vote request for {} ", vote.toString());
-
+        ResponseEntity<String> res;
         if (cpProtocolService.vote(vote)) {
-            return createResponse("CP RAFT Vote - Voting yes: " + vote.toString(), HttpStatus.OK);
+            res = createResponse("CP RAFT Vote - Voting yes: " + vote.toString(), HttpStatus.OK);
         } else {
-            return createResponse("CP RAFT Vote - Voting no: " + vote.toString(), HttpStatus.NOT_FOUND);
+            res = createResponse("CP RAFT Vote - Voting no: " + vote.toString(), HttpStatus.NOT_FOUND);
         }
+
+        log.info("/vote request from {}, term {}: {} ", vote.getPort(), vote.getTerm(), asOkay(res, "yes", "no"));
+        return res;
     }
+
+    private String asOkay(ResponseEntity<String> res, String okay, String fail) {
+        return res.getStatusCode() == HttpStatus.OK ? okay : fail;
+    }
+
 //
 //    @GetMapping("history")
 //    public ResponseEntity<List<Record>> history() {
