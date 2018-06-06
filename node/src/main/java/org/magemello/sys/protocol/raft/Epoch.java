@@ -22,15 +22,9 @@ public class Epoch {
     
     public boolean update(Update update) {
         if (update.term < term || update.term == term && update.tick <= tick) {
-            log.debug("Received a too old term {}, we are in {}", update.term, term);
+            log.info("Received a too old term {}, we are in {}", update.term, term);
             return false;
         }
-        
-        if (update.term > term) {
-            log.debug("Received a tick in the future - need to restart!");
-            return false;
-        }
-
         
         this.tick = update.tick;
         this.leader = update.from;

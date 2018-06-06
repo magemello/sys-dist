@@ -4,11 +4,13 @@ import org.magemello.sys.node.domain.Record;
 
 public class Update {
 
-    public final int from;
-    public final int term;
-    public final int tick;
-    public final Record data;
+    public int from;
+    public int term;
+    public int tick;
+    public Record data;
 
+    protected Update() {}
+    
     public Update(int whoami, Epoch epoch, Record data) {
         this.from = whoami;
         this.term = epoch.getTerm();
@@ -18,8 +20,8 @@ public class Update {
 
     @Override
     public String toString() {
-        return "Update{" +
-                "from=" + from +
+        return  "{"
+                + "from=" + from +
                 ", term=" + term +
                 ", tick=" + tick +
                 ", data=" + data +

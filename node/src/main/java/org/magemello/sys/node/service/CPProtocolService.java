@@ -32,7 +32,7 @@ public class CPProtocolService implements ProtocolService {
     @Autowired
     private CPProtocolClient client;
 
-    private Raft raft;
+    private Raft raft = new Raft(0, client, 0);
 
     @Override
     public Mono<ResponseEntity> get(String key) {

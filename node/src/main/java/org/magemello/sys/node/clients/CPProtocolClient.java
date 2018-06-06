@@ -6,8 +6,6 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.magemello.sys.node.domain.VoteRequest;
 import org.magemello.sys.node.service.P2PService;
 import org.magemello.sys.protocol.raft.Update;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
@@ -23,8 +21,6 @@ import reactor.core.publisher.Mono;
 @Service
 public class CPProtocolClient {
 
-    private static final Logger log = LoggerFactory.getLogger(CPProtocolClient.class);
-
     @Autowired
     private P2PService p2pService;
 
@@ -34,15 +30,12 @@ public class CPProtocolClient {
     public Mono<Long> sendBeat(Update update, Integer quorum) {
         return new Mono<Long>() {
 
-            private CoreSubscriber<? super Long> actual;
-
-            AtomicLong responseQuorum = new AtomicLong(0);
+            private CoreSubscriber<? super Long> context;
+            private AtomicLong responses = new AtomicLong(0);
 
             @Override
             public void subscribe(CoreSubscriber<? super Long> actual) {
-                log.info("Sending beat to peers: {}", update);
-
-                this.actual = actual;
+                this.context = actual;
                 sendBeat(update)
                         .map(this::manageUpdateQuorum)
                         .count()
@@ -53,10 +46,9 @@ public class CPProtocolClient {
             }
 
             private ClientResponse manageUpdateQuorum(ClientResponse clientResponse) {
-                Long currentQuorum = responseQuorum.incrementAndGet();
-                if (currentQuorum >= quorum) {
-                    actual.onNext(currentQuorum);
-                    actual.onComplete();
+                if (responses.incrementAndGet() >= quorum) {
+                    context.onNext(responses.incrementAndGet());
+                    context.onComplete();
                 }
 
                 return clientResponse;
@@ -72,19 +64,26 @@ public class CPProtocolClient {
                 .filter(response -> !response.statusCode().isError());
     }
 
+    private Mono<ClientResponse> createWebClientBeat(Update update, String peer) {
+        return WebClient.create()
+                .post()
+                .uri("http://" + peer + "/cp/update")
+                .accept(MediaType.APPLICATION_JSON)
+                .syncBody(update)
+                .exchange()
+                .onErrorResume(throwable -> Mono.just(ClientResponse.create(HttpStatus.BAD_GATEWAY).build()));
+    }
+
 
     public Mono<Long> requestVotes(Integer whoami, Integer term, int quorum) {
         return new Mono<Long>() {
 
-            private CoreSubscriber<? super Long> actual;
-
-            AtomicLong voteQuorum = new AtomicLong(0);
+            private CoreSubscriber<? super Long> context;
+            private AtomicLong responses = new AtomicLong(0);
 
             @Override
             public void subscribe(CoreSubscriber<? super Long> actual) {
-                log.info("Sending vote request to peers");
-
-                this.actual = actual;
+                this.context = actual;
 
                 requestVotes(whoami, term)
                         .map(this::manageRequestVoteQuorum)
@@ -96,11 +95,9 @@ public class CPProtocolClient {
             }
 
             private ClientResponse manageRequestVoteQuorum(ClientResponse clientResponse) {
-                Long currentQuorum = voteQuorum.incrementAndGet();
-
-                if (currentQuorum >= quorum) {
-                    actual.onNext(currentQuorum);
-                    actual.onComplete();
+                if (responses.incrementAndGet() >= quorum) {
+                    context.onNext(responses.incrementAndGet());
+                    context.onComplete();
                 }
 
                 return clientResponse;
@@ -108,7 +105,6 @@ public class CPProtocolClient {
         };
     }
 
-    
     private Flux<ClientResponse> requestVotes(Integer whoami, Integer term) {
         return Flux.fromIterable(p2pService.getPeers())
                 .flatMap(peer -> createWebClientVote(whoami, term, peer), p2pService.getPeers().size())
@@ -123,16 +119,6 @@ public class CPProtocolClient {
                 .uri("http://" + peer + "/cp/voteforme")
                 .accept(MediaType.APPLICATION_JSON)
                 .syncBody(new VoteRequest(whoami, term))
-                .exchange()
-                .onErrorResume(throwable -> Mono.just(ClientResponse.create(HttpStatus.BAD_GATEWAY).build()));
-    }
-
-    private Mono<ClientResponse> createWebClientBeat(Update update, String peer) {
-        return WebClient.create()
-                .post()
-                .uri("http://" + peer + "/cp/update")
-                .accept(MediaType.APPLICATION_JSON)
-                .syncBody(update)
                 .exchange()
                 .onErrorResume(throwable -> Mono.just(ClientResponse.create(HttpStatus.BAD_GATEWAY).build()));
     }

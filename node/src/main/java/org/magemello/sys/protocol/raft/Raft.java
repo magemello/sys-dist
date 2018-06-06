@@ -91,8 +91,6 @@ public class Raft {
                 if (responses < quorum) {
                     log.info("I was able to end the beat only to {} followers for term {}", responses, epoch.getTerm());
                     switchToFollower();
-                } else {
-                    log.info("I'm still the leader for term {}!", epoch.getTerm());
                 }
             });
         }
