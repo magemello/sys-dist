@@ -91,6 +91,7 @@ public class Raft {
         @Override
         public void run() {
             epoch.nextTick();
+            log.info("Sending beat, term {}, tick {}", epoch.getTerm(), epoch.getTick());
             api.sendBeat(new Update(whoami, epoch, null));
 
             int responses = 0;
@@ -154,7 +155,7 @@ public class Raft {
 
     private void switchStatus(Runnable newStatus) {
         log.info("Switching from status {} to status {}", status, newStatus);
-        newStatus = status;
+        status = newStatus;
     }
 
     public void start() {
