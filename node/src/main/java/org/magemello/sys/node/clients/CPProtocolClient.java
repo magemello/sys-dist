@@ -40,7 +40,7 @@ public class CPProtocolClient {
 
             @Override
             public void subscribe(CoreSubscriber<? super Long> actual) {
-                log.info("Sending vote for request to peers");
+                log.info("Sending beat to peers: {}", update);
 
                 this.actual = actual;
                 sendBeat(update)

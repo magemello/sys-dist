@@ -87,9 +87,9 @@ public class Raft {
             epoch.nextTick();
             log.info("Sending beat, term {}, tick {}", epoch.getTerm(), epoch.getTick());
 
-            api.sendBeat(new Update(whoami, epoch, null), quorum).subscribe(beatQuorum -> {
-                if (beatQuorum < quorum) {
-                    log.info("It appears I have not enough followers :( for term {}", epoch.getTerm());
+            api.sendBeat(new Update(whoami, epoch, null), quorum).subscribe(responses -> {
+                if (responses < quorum) {
+                    log.info("I was able to end the beat only to {} followers for term {}", responses, epoch.getTerm());
                     switchToFollower();
                 } else {
                     log.info("I'm still the leader for term {}!", epoch.getTerm());
