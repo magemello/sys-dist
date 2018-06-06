@@ -32,6 +32,14 @@ public class CPProtocolClient {
                 .filter(response -> !response.statusCode().isError());
     }
 
+    public Flux<ClientResponse> sendBeat(Update update) {
+        return Flux.fromIterable(p2pService.getPeers())
+                .flatMap(peer -> createWebClientBeat(update, peer), p2pService.getPeers().size())
+                .timeout(Duration.ofMillis(clientTimeout))
+                .onErrorResume(throwable -> Mono.just(ClientResponse.create(HttpStatus.REQUEST_TIMEOUT).build()))
+                .filter(response -> !response.statusCode().isError());
+    }
+
     private Mono<ClientResponse> createWebClientVote(Integer whoami, Integer term, String peer) {
         return WebClient.create()
                 .post()
@@ -40,18 +48,6 @@ public class CPProtocolClient {
                 .syncBody(new VoteRequest(whoami, term))
                 .exchange()
                 .onErrorResume(throwable -> Mono.just(ClientResponse.create(HttpStatus.BAD_GATEWAY).build()));
-    }
-
-
-    // FIXME - the API returns success as soon as it receives as many responses as the requested quorum
-    public boolean sendBeat(Update update, Integer quorum) {
-        Flux.fromIterable(p2pService.getPeers())
-                .flatMap(peer -> createWebClientBeat(update, peer), p2pService.getPeers().size())
-                .timeout(Duration.ofMillis(clientTimeout))
-                .onErrorResume(throwable -> Mono.just(ClientResponse.create(HttpStatus.REQUEST_TIMEOUT).build()))
-                .filter(response -> !response.statusCode().isError()).count().block();
-        
-        return false;
     }
 
     private Mono<ClientResponse> createWebClientBeat(Update update, String peer) {

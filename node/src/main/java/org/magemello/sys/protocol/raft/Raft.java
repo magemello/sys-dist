@@ -9,6 +9,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.magemello.sys.node.clients.CPProtocolClient;
 import org.magemello.sys.node.domain.VoteRequest;
@@ -92,11 +93,15 @@ public class Raft {
         public void run() {
             epoch.nextTick();
             log.info("Sending beat, term {}, tick {}", epoch.getTerm(), epoch.getTick());
-            if (!api.sendBeat(new Update(whoami, epoch, null), quorum)) {
-                log.info("It appears I have not enough followers :(");
-                switchToFollower();
-            }
 
+            handleBeat(new Update(whoami, epoch, null), epoch.getTerm()).subscribe(beatQuorum -> {
+                if (beatQuorum < quorum) {
+                    log.info("It appears I have not enough followers :( for term {}", epoch.getTerm());
+                    switchToFollower();
+                } else {
+                    log.info("I'm still the leader for term {}!", epoch.getTerm());
+                }
+            });
         }
 
         @Override
@@ -104,6 +109,40 @@ public class Raft {
             return "leader";
         }
     };
+
+    private Mono<Long> handleBeat(Update update, Integer term) {
+        return new Mono<Long>() {
+
+            private CoreSubscriber<? super Long> actual;
+
+            AtomicLong responseQuorum = new AtomicLong(0);
+
+            @Override
+            public void subscribe(CoreSubscriber<? super Long> actual) {
+                log.info("Sending vote for request to peers");
+
+                this.actual = actual;
+
+                api.sendBeat(update)
+                        .map(this::manageUpdateQuorum)
+                        .count()
+                        .subscribe(quorum -> {
+                            actual.onNext(quorum);
+                            actual.onComplete();
+                        });
+            }
+
+            private ClientResponse manageUpdateQuorum(ClientResponse clientResponse) {
+                Long currentQuorum = responseQuorum.incrementAndGet();
+                if (currentQuorum >= quorum) {
+                    actual.onNext(currentQuorum);
+                    actual.onComplete();
+                }
+
+                return clientResponse;
+            }
+        };
+    }
 
     private void switchToFollower() {
         switchStatus(follower);
@@ -113,36 +152,42 @@ public class Raft {
         epoch = epoch.nextTerm();
         switchStatus(candidate);
 
-        handleVote(whoami, epoch.getTerm()).subscribe(responseEntity -> {
-            log.info("- Vote request complete");
+        handleVote(whoami, epoch.getTerm()).subscribe(voteQuorum -> {
+            if (voteQuorum >= quorum) {
+                log.info("I was elected leader for term {}!", epoch.getTerm());
+                switchStatus(leader);
+            }
         });
     }
 
-    private Mono<ResponseEntity> handleVote(Integer whoami, Integer term) {
-        return new Mono<ResponseEntity>() {
+    private Mono<Long> handleVote(Integer whoami, Integer term) {
+        return new Mono<Long>() {
 
-            private CoreSubscriber<? super ResponseEntity> actual;
+            private CoreSubscriber<? super Long> actual;
 
-            AtomicInteger voteQuorum = new AtomicInteger(0);
+            AtomicLong voteQuorum = new AtomicLong(0);
 
             @Override
-            public void subscribe(CoreSubscriber<? super ResponseEntity> actual) {
+            public void subscribe(CoreSubscriber<? super Long> actual) {
                 log.info("Sending vote for request to peers");
 
                 this.actual = actual;
 
                 api.requestVotes(whoami, term)
-                        .map(this::manageRequestVoteQuorum).collectList()
-                        .subscribe(signalType -> actual.onComplete());
+                        .map(this::manageRequestVoteQuorum)
+                        .count()
+                        .subscribe(quorum -> {
+                            actual.onNext(quorum);
+                            actual.onComplete();
+                        });
             }
 
             private ClientResponse manageRequestVoteQuorum(ClientResponse clientResponse) {
-                if (!clientResponse.statusCode().isError()) {
-                    if (voteQuorum.incrementAndGet() >= quorum) {
-                        log.info("I was elected leader for term {}!", term);
-                        switchStatus(leader);
-                        actual.onComplete();
-                    }
+                Long currentQuorum = voteQuorum.incrementAndGet();
+
+                if (currentQuorum >= quorum) {
+                    actual.onNext(currentQuorum);
+                    actual.onComplete();
                 }
 
                 return clientResponse;
