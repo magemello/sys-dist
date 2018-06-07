@@ -2,7 +2,7 @@ package org.magemello.sys.node.protocols.cp.clients;
 
 import org.magemello.sys.node.domain.RecordTerm;
 import org.magemello.sys.node.domain.VoteRequest;
-import org.magemello.sys.node.protocols.cp.raft.Update;
+import org.magemello.sys.node.protocols.cp.domain.Update;
 import org.magemello.sys.node.service.P2PService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;

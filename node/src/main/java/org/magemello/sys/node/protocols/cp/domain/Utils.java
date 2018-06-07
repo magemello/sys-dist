@@ -1,4 +1,4 @@
-package org.magemello.sys.node.protocols.cp.raft;
+package org.magemello.sys.node.protocols.cp.domain;
 
 public interface Utils {
 

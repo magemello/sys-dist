@@ -1,10 +1,10 @@
-package org.magemello.sys.node.protocols.cp.raft;
+package org.magemello.sys.node.protocols.cp.domain;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static org.magemello.sys.node.protocols.cp.raft.Utils.DEFAULT_ELECTION_TIMEOUT;
-import static org.magemello.sys.node.protocols.cp.raft.Utils.randomize;
+import static org.magemello.sys.node.protocols.cp.domain.Utils.DEFAULT_ELECTION_TIMEOUT;
+import static org.magemello.sys.node.protocols.cp.domain.Utils.randomize;
 
 public class Epoch {
 

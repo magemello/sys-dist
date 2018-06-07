@@ -1,17 +1,14 @@
 package org.magemello.sys.node.protocols.cp.controller;
 
-import org.magemello.sys.node.domain.RecordTerm;
 import org.magemello.sys.node.domain.VoteRequest;
-import org.magemello.sys.node.protocols.cp.raft.Update;
+import org.magemello.sys.node.protocols.cp.domain.Update;
 import org.magemello.sys.node.protocols.cp.service.CPProtocolService;
-import org.magemello.sys.node.repository.RecordTermRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import reactor.core.publisher.Flux;
 
 @RestController()
 @RequestMapping("cp")
