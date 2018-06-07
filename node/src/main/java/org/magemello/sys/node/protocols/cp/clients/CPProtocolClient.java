@@ -1,11 +1,9 @@
-package org.magemello.sys.node.clients;
+package org.magemello.sys.node.protocols.cp.clients;
 
-import java.time.Duration;
-import java.util.concurrent.atomic.AtomicLong;
-
+import org.magemello.sys.node.domain.RecordTerm;
 import org.magemello.sys.node.domain.VoteRequest;
+import org.magemello.sys.node.protocols.cp.raft.Update;
 import org.magemello.sys.node.service.P2PService;
-import org.magemello.sys.protocol.raft.Update;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
@@ -13,10 +11,12 @@ import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.ClientResponse;
 import org.springframework.web.reactive.function.client.WebClient;
-
 import reactor.core.CoreSubscriber;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+
+import java.time.Duration;
+import java.util.concurrent.atomic.AtomicLong;
 
 @Service
 public class CPProtocolClient {
@@ -26,6 +26,18 @@ public class CPProtocolClient {
 
     @Value("${client.timeout:3}")
     private Integer clientTimeout;
+
+    @Value("${server.port}")
+    private String serverPort;
+
+    public Mono<ClientResponse> forwardDataToLeader(String key, String value, String leaderAddress) {
+        return WebClient.create()
+                .post()
+                .uri("http://" + leaderAddress + "/storage/" + key + "/" + value)
+                .accept(MediaType.APPLICATION_JSON)
+                .exchange()
+                .onErrorResume(throwable -> Mono.just(ClientResponse.create(HttpStatus.BAD_GATEWAY).build()));
+    }
 
     public Mono<Long> sendBeat(Update update, Integer quorum) {
         return new Mono<Long>() {
@@ -58,13 +70,13 @@ public class CPProtocolClient {
 
     private Flux<ClientResponse> sendBeat(Update update) {
         return Flux.fromIterable(p2pService.getPeers())
-                .flatMap(peer -> createWebClientBeat(update, peer), p2pService.getPeers().size())
+                .flatMap(peer -> createWebClientSendBeat(update, peer), p2pService.getPeers().size())
                 .timeout(Duration.ofMillis(clientTimeout))
                 .onErrorResume(throwable -> Mono.just(ClientResponse.create(HttpStatus.REQUEST_TIMEOUT).build()))
                 .filter(response -> !response.statusCode().isError());
     }
 
-    private Mono<ClientResponse> createWebClientBeat(Update update, String peer) {
+    private Mono<ClientResponse> createWebClientSendBeat(Update update, String peer) {
         return WebClient.create()
                 .post()
                 .uri("http://" + peer + "/cp/update")
@@ -74,8 +86,16 @@ public class CPProtocolClient {
                 .onErrorResume(throwable -> Mono.just(ClientResponse.create(HttpStatus.BAD_GATEWAY).build()));
     }
 
+    public Flux<RecordTerm> history(Integer term, Integer tick, String leaderAddress) {
+        return WebClient.create()
+                .get()
+                .uri("http://" + leaderAddress + "/cp/history/" + term.toString() + "/" + tick.toString())
+                .accept(MediaType.APPLICATION_JSON)
+                .retrieve()
+                .bodyToFlux(RecordTerm.class);
+    }
 
-    public Mono<Long> requestVotes(Integer whoami, Integer term, int quorum) {
+    public Mono<Long> requestVotes(Integer term, int quorum) {
         return new Mono<Long>() {
 
             private CoreSubscriber<? super Long> context;
@@ -85,7 +105,7 @@ public class CPProtocolClient {
             public void subscribe(CoreSubscriber<? super Long> actual) {
                 this.context = actual;
 
-                requestVotes(whoami, term)
+                requestVotes(term)
                         .map(this::manageRequestVoteQuorum)
                         .count()
                         .subscribe(quorum -> {
@@ -105,20 +125,20 @@ public class CPProtocolClient {
         };
     }
 
-    private Flux<ClientResponse> requestVotes(Integer whoami, Integer term) {
+    private Flux<ClientResponse> requestVotes(Integer term) {
         return Flux.fromIterable(p2pService.getPeers())
-                .flatMap(peer -> createWebClientVote(whoami, term, peer), p2pService.getPeers().size())
+                .flatMap(peer -> createWebClientVote(term, peer), p2pService.getPeers().size())
                 .timeout(Duration.ofMillis(clientTimeout))
                 .onErrorResume(throwable -> Mono.just(ClientResponse.create(HttpStatus.REQUEST_TIMEOUT).build()))
                 .filter(response -> !response.statusCode().isError());
     }
 
-    private Mono<ClientResponse> createWebClientVote(Integer whoami, Integer term, String peer) {
+    private Mono<ClientResponse> createWebClientVote(Integer term, String peer) {
         return WebClient.create()
                 .post()
                 .uri("http://" + peer + "/cp/voteforme")
                 .accept(MediaType.APPLICATION_JSON)
-                .syncBody(new VoteRequest(whoami, term))
+                .syncBody(new VoteRequest(Integer.parseInt(serverPort), term))
                 .exchange()
                 .onErrorResume(throwable -> Mono.just(ClientResponse.create(HttpStatus.BAD_GATEWAY).build()));
     }

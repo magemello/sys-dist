@@ -1,9 +1,10 @@
-package org.magemello.sys.node.service;
+package org.magemello.sys.node.protocols.ac.service;
 
-import org.magemello.sys.node.clients.ACProtocolClient;
 import org.magemello.sys.node.domain.Record;
 import org.magemello.sys.node.domain.Transaction;
+import org.magemello.sys.node.protocols.ac.clients.ACProtocolClient;
 import org.magemello.sys.node.repository.RecordRepository;
+import org.magemello.sys.node.service.ProtocolService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;

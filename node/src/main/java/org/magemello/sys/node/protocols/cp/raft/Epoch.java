@@ -1,35 +1,35 @@
-package org.magemello.sys.protocol.raft;
-
-import static org.magemello.sys.protocol.raft.Utils.DEFAULT_ELECTION_TIMEOUT;
-import static org.magemello.sys.protocol.raft.Utils.randomize;
+package org.magemello.sys.node.protocols.cp.raft;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static org.magemello.sys.node.protocols.cp.raft.Utils.DEFAULT_ELECTION_TIMEOUT;
+import static org.magemello.sys.node.protocols.cp.raft.Utils.randomize;
+
 public class Epoch {
-    
+
     private static final Logger log = LoggerFactory.getLogger(Epoch.class);
 
     private int term;
     private int tick;
     private int leader;
     private long end;
-    
+
     public Epoch(int number) {
         this.term = number;
         touch();
     }
-    
+
     public boolean update(Update update) {
         if (update.term < term || update.term == term && update.tick <= tick) {
             log.info("Received a too old term {}, we are in {}", update.term, term);
             return false;
         }
-        
+
         this.tick = update.tick;
         this.leader = update.from;
         touch();
-        
+
         return true;
     }
 

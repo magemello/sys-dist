@@ -1,17 +1,17 @@
-package org.magemello.sys.protocol.raft;
+package org.magemello.sys.node.protocols.cp.raft;
 
-import org.magemello.sys.node.domain.Record;
+import org.magemello.sys.node.domain.RecordTerm;
 
 public class Update {
 
-    public int from;
-    public int term;
-    public int tick;
-    public Record data;
+    public Integer from;
+    public Integer term;
+    public Integer tick;
+    public RecordTerm data;
 
     protected Update() {}
-    
-    public Update(int whoami, Epoch epoch, Record data) {
+
+    public Update(int whoami, Epoch epoch, RecordTerm data) {
         this.from = whoami;
         this.term = epoch.getTerm();
         this.tick = epoch.getTick();

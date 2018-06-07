@@ -1,14 +1,17 @@
-package org.magemello.sys.node.controller;
+package org.magemello.sys.node.protocols.cp.controller;
 
+import org.magemello.sys.node.domain.RecordTerm;
 import org.magemello.sys.node.domain.VoteRequest;
-import org.magemello.sys.node.service.CPProtocolService;
-import org.magemello.sys.protocol.raft.Update;
+import org.magemello.sys.node.protocols.cp.raft.Update;
+import org.magemello.sys.node.protocols.cp.service.CPProtocolService;
+import org.magemello.sys.node.repository.RecordTermRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import reactor.core.publisher.Flux;
 
 @RestController()
 @RequestMapping("cp")
@@ -19,13 +22,16 @@ public class CPProtocolController {
     @Autowired
     private CPProtocolService cpProtocolService;
 
+    @Autowired
+    private RecordTermRepository recordTermRepository;
+
     @PostMapping("update")
     public ResponseEntity<String> update(@RequestBody Update update) {
         ResponseEntity<String> res;
         if (cpProtocolService.beat(update)) {
             res = createResponse("CP RAFT Update - Update success: " + update.toString(), HttpStatus.OK);
         } else {
-            res =  createResponse("CP RAFT Update - Update failed: " + update.toString(), HttpStatus.NOT_FOUND);
+            res = createResponse("CP RAFT Update - Update failed: " + update.toString(), HttpStatus.NOT_FOUND);
         }
 
         log.info("/update {}: {} ", update.toString(), asOkay(res, "good", "fail"));
@@ -49,10 +55,11 @@ public class CPProtocolController {
         return res.getStatusCode() == HttpStatus.OK ? okay : fail;
     }
 
-//
-//    @GetMapping("history")
-//    public ResponseEntity<List<Record>> history() {
-//    }
+
+    @GetMapping("history/{term}/{tick}")
+    public Flux<RecordTerm> history(@PathVariable Integer term, @PathVariable Integer tick) {
+        return recordTermRepository.findByTermLessThanAndTickLessThan(term, tick);
+    }
 
     private ResponseEntity<String> createResponse(String message, HttpStatus status) {
         return ResponseEntity

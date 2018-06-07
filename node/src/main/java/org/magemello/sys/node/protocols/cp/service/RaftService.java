@@ -1,7 +1,17 @@
-package org.magemello.sys.protocol.raft;
+package org.magemello.sys.node.protocols.cp.service;
 
-import static org.magemello.sys.protocol.raft.Utils.DEFAULT_TICK_TIMEOUT;
-import static org.magemello.sys.protocol.raft.Utils.randomize;
+import org.magemello.sys.node.domain.RecordTerm;
+import org.magemello.sys.node.domain.VoteRequest;
+import org.magemello.sys.node.protocols.cp.clients.CPProtocolClient;
+import org.magemello.sys.node.protocols.cp.raft.Epoch;
+import org.magemello.sys.node.protocols.cp.raft.Update;
+import org.magemello.sys.node.repository.RecordTermRepository;
+import org.magemello.sys.node.service.P2PService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -9,32 +19,40 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
-import org.magemello.sys.node.clients.CPProtocolClient;
-import org.magemello.sys.node.domain.VoteRequest;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import static org.magemello.sys.node.protocols.cp.raft.Utils.DEFAULT_TICK_TIMEOUT;
+import static org.magemello.sys.node.protocols.cp.raft.Utils.randomize;
 
-public class Raft {
+@Service
+public class RaftService {
 
-    private static final Logger log = LoggerFactory.getLogger(Raft.class);
+    private static final Logger log = LoggerFactory.getLogger(RaftService.class);
 
-    private final int whoami;
-    private final int quorum;
-    private final CPProtocolClient api;
+
+    @Value("${server.port}")
+    private Integer serverPort;
+
+    @Value("${server.address}")
+    private String serverAddress;
+
+    @Autowired
+    private P2PService p2pService;
+
+    @Autowired
+    private CPProtocolClient api;
+
+    @Autowired
+    private RecordTermRepository recordTermRepository;
+
+    private Integer quorum;
+
 
     private volatile Epoch epoch;
     private volatile Runnable status;
 
     private VotingBoard votes;
 
-    public Raft(int whoami, CPProtocolClient api, int quorum) {
-        this.api = api;
-        this.whoami = whoami;
-        this.epoch = new Epoch(0);
-        this.quorum = quorum;
-        this.status = follower;
-        this.votes = new VotingBoard();
-    }
+    private RecordTerm dataBuffer;
+
 
     public boolean handleVoteRequest(VoteRequest vote) {
         epoch.touch();
@@ -47,12 +65,44 @@ public class Raft {
             if (status == candidate) {
                 log.info("Ops! Somebody is already in charge, election aborted!");
                 switchToFollower();
-            } else if (status == leader) {
+            } else if (amITheLeader()) {
                 log.info("Ops! Two leaders here? Let's start an election!");
                 switchToCandidate();
+                return false;
             }
+        } else {
+            return false;
         }
-        return success;
+
+        if ((epoch.getTerm() != beat.term && beat.tick != 1) || (epoch.getTerm() == beat.term && beat.tick - epoch.getTick() > 1)) {
+            log.info("Asking history from term {} and tick {} to {}", epoch.getTerm(), epoch.getTick(), beat.from);
+            String leaderAddress = serverAddress + beat.from.toString();
+
+            api.history(epoch.getTerm(), epoch.getTick(), leaderAddress).subscribe(recordTerm -> {
+                recordTermRepository.save(recordTerm);
+            });
+            return true;
+        } else {
+            recordTermRepository.save(beat.data);
+        }
+        return false;
+    }
+
+    public boolean amITheLeader() {
+        return status == leader;
+    }
+
+    public boolean amIAFollower() {
+        return status == follower;
+    }
+
+    public boolean setData(String key, String value) {
+        if (dataBuffer == null) {
+            dataBuffer = new RecordTerm(key, value);
+            return true;
+        } else {
+            return false;
+        }
     }
 
     private Runnable follower = new Runnable() {
@@ -72,10 +122,10 @@ public class Raft {
 
     private Runnable candidate = new Runnable() {
         private int count;
-        
+
         @Override
         public void run() {
-            if (++count%10 == 0) {
+            if (++count % 10 == 0) {
                 log.info("Nothing happening, let's try another election!");
                 switchToCandidate();
             }
@@ -92,12 +142,15 @@ public class Raft {
         public void run() {
             epoch.nextTick();
             log.info("Sending beat, term {}, tick {}", epoch.getTerm(), epoch.getTick());
+            dataBuffer.setTermAndTick(epoch.getTerm(), epoch.getTick());
+            recordTermRepository.save(dataBuffer);
 
-            api.sendBeat(new Update(whoami, epoch, null), quorum).subscribe(responses -> {
+            api.sendBeat(new Update(serverPort, epoch, dataBuffer), quorum).subscribe(responses -> {
                 if (responses < quorum) {
                     log.info("I was able to end the beat only to {} followers for term {}", responses, epoch.getTerm());
                     switchToFollower();
                 }
+                dataBuffer = null;
             });
         }
 
@@ -114,10 +167,10 @@ public class Raft {
 
     private void switchToCandidate() {
         epoch = epoch.nextTerm();
-        votes.put(epoch.getTerm(), whoami);
+        votes.put(epoch.getTerm(), serverPort);
         switchStatus(candidate);
 
-        api.requestVotes(whoami, epoch.getTerm(), quorum).subscribe(voteQuorum -> {
+        api.requestVotes(epoch.getTerm(), quorum).subscribe(voteQuorum -> {
             if (voteQuorum >= quorum) {
                 log.info("I was elected leader for term {}!", epoch.getTerm());
                 switchStatus(leader);
@@ -134,6 +187,11 @@ public class Raft {
     }
 
     public void start() {
+        this.quorum = 1 + p2pService.getPeers().size() / 2;
+        this.epoch = new Epoch(0);
+        this.status = follower;
+        this.votes = new VotingBoard();
+
         ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
         scheduleNext(scheduler, new Runnable() {
             @Override
