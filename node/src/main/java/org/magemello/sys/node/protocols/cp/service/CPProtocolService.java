@@ -46,7 +46,7 @@ public class CPProtocolService implements ProtocolService {
     private P2PService p2pService;
 
     @Autowired
-    private RecordRepository recordTermRepository;
+    private RecordRepository recordRepository;
 
     @Autowired
     private CPProtocolClient cpProtocolClient;
@@ -65,7 +65,7 @@ public class CPProtocolService implements ProtocolService {
 
     @Override
     public Mono<ResponseEntity> get(String key) {
-        Optional<RecordTerm> record = recordTermRepository.findByKey(key);
+        Optional<RecordTerm> record = recordRepository.findByKey(key);
         if (record.isPresent()) {
             return Mono.just(ResponseEntity.status(HttpStatus.OK).body("RAFT " + record.get().toString()));
         } else {
@@ -89,30 +89,6 @@ public class CPProtocolService implements ProtocolService {
             log.info("\nNo leader elected yet\n");
             return Mono.just(ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body("No leader at the moment!"));
         }
-
-//        if (amITheLeader()) {
-//            log.info("- I'm the leader scheduling data for the next beat");
-//
-//            if (setData(key, value)) {
-//                log.info("- Data scheduled");
-//
-//                return Mono.just(ResponseEntity.status(HttpStatus.OK).build());
-//            } else {
-//                log.info("- Buffer full data not scheduled");
-//
-//                return Mono.just(ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).build());
-//            }
-//        }
-//
-//        if (amIAFollower()) {
-//            log.info("- Forwarding write request of {} to leader {} for value {}", key, leaderAddress, value);
-//
-//            ClientResponse clientResponse = cpProtocolClient.forwardDataToLeader(key, value, leaderAddress).block();
-//            log.info("- Status write request {} ", clientResponse.statusCode());
-//
-//            return Mono.just(ResponseEntity.status(clientResponse.statusCode()).build());
-//        }
-
     }
 
     @Override
@@ -130,11 +106,11 @@ public class CPProtocolService implements ProtocolService {
         this.quorum = 1 + p2pService.getPeers().size() / 2;
         this.epoch = new Epoch(0);
         this.votes = new VotingBoard();
-        this.status = new Runnable() {            
+        this.status = new Runnable() {
             @Override
             public void run() {
                 DemoController.clr();
-                status=follower;
+                status = follower;
             }
         };
 
@@ -176,6 +152,9 @@ public class CPProtocolService implements ProtocolService {
     }
 
     public boolean handleBeat(Update beat) {
+        Integer currentTerm = epoch.getTerm();
+        Integer currentTick = epoch.getTick();
+
         boolean success = epoch.update(beat);
         if (success) {
             if (status == candidate) {
@@ -187,27 +166,18 @@ public class CPProtocolService implements ProtocolService {
             }
         }
 
-        if (beat.data != null) {
-            recordTermRepository.save(beat.data);
+        if ((currentTerm != beat.term && beat.tick != 1) || (currentTerm == beat.term && beat.tick - currentTick > 1)) {
+//            log.info("-----Sync {} {} - {} {}", epoch.getTerm(), epoch.getTick(), beat.term, beat.tick);
+            log.info("Asking history from term {} and tick {} to {}", epoch.getTerm(), epoch.getTick(), beat.from);
+            cpProtocolClient.history(epoch.getTerm(), epoch.getTick(), beat.from).subscribe(recordTerm -> {
+                recordRepository.save(recordTerm);
+            });
+            return true;
+        } else {
+            if (beat.data != null) {
+                recordRepository.save(beat.data);
+            }
         }
-
-//        if ((epoch.getTerm() != beat.term && beat.tick != 1) || (epoch.getTerm() == beat.term && beat.tick - epoch.getTick() > 1)) {
-//            log.info("Sync needed");
-//
-//        }
-//        if ((epoch.getTerm() != beat.term && beat.tick != 1) || (epoch.getTerm() == beat.term && beat.tick - epoch.getTick() > 1)) {
-//            log.info("Asking history from term {} and tick {} to {}", epoch.getTerm(), epoch.getTick(), beat.from);
-//            String leaderAddress = serverAddress + beat.from.toString();
-//
-//            cpProtocolClient.history(epoch.getTerm(), epoch.getTick(), leaderAddress).subscribe(recordTerm -> {
-//                recordTermRepository.save(recordTerm);
-//            });
-//            return true;
-//        } else {
-//            if (beat.data != null) {
-//                recordTermRepository.save(beat.data);
-//            }
-//        }
 
         return success;
     }
@@ -258,10 +228,10 @@ public class CPProtocolService implements ProtocolService {
             epoch.nextTick();
 
             if (updateBuffer != null) {
-                recordTermRepository.save(updateBuffer);
-            } 
+                recordRepository.save(updateBuffer);
+            }
 
-            log.info("\rBeating, term={},tick={}{}", epoch.getTerm(), epoch.getTick(), (updateBuffer != null) ? ",data="+updateBuffer.toString()+"\n" : "");
+            log.info("\rBeating, term={},tick={}{}", epoch.getTerm(), epoch.getTick(), (updateBuffer != null) ? ",data=" + updateBuffer.toString() + "\n" : "");
 
             cpProtocolClient.sendBeat(new Update(serverPort, epoch, updateBuffer), quorum).subscribe(responses -> {
                 if (responses < quorum) {

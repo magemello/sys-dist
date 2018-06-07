@@ -30,7 +30,7 @@ public class CPProtocolClient {
     @Value("${server.port}")
     private String serverPort;
 
-    public Mono<ClientResponse> forwardDataToLeader(String key, String value, int port) {
+    public Mono<ClientResponse> forwardDataToLeader(String key, String value, Integer port) {
         return WebClient.create()
                 .post()
                 .uri("http://127.0.0." + (port - 3000) + ":" + port + "/storage/" + key + "/" + value)
@@ -86,10 +86,10 @@ public class CPProtocolClient {
                 .onErrorResume(throwable -> Mono.just(ClientResponse.create(HttpStatus.BAD_GATEWAY).build()));
     }
 
-    public Flux<RecordTerm> history(Integer term, Integer tick, String leaderAddress) {
+    public Flux<RecordTerm> history(Integer term, Integer tick, Integer port) {
         return WebClient.create()
                 .get()
-                .uri("http://" + leaderAddress + "/cp/history/" + term.toString() + "/" + tick.toString())
+                .uri("http://127.0.0." + (port - 3000) + ":" + port + "/cp/history/" + term.toString() + "/" + tick.toString())
                 .accept(MediaType.APPLICATION_JSON)
                 .retrieve()
                 .bodyToFlux(RecordTerm.class);

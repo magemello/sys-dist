@@ -1,14 +1,17 @@
 package org.magemello.sys.node.protocols.cp.controller;
 
+import org.magemello.sys.node.domain.RecordTerm;
 import org.magemello.sys.node.domain.VoteRequest;
 import org.magemello.sys.node.protocols.cp.domain.Update;
 import org.magemello.sys.node.protocols.cp.service.CPProtocolService;
+import org.magemello.sys.node.repository.RecordRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import reactor.core.publisher.Flux;
 
 @RestController()
 @RequestMapping("cp")
@@ -18,6 +21,9 @@ public class CPProtocolController {
 
     @Autowired
     private CPProtocolService cpProtocolService;
+
+    @Autowired
+    private RecordRepository recordRepository;
 
     @PostMapping("update")
     public ResponseEntity<String> update(@RequestBody Update update) {
@@ -50,10 +56,10 @@ public class CPProtocolController {
     }
 
 
-//    @GetMapping("history/{term}/{tick}")
-//    public Flux<RecordTerm> history(@PathVariable Integer term, @PathVariable Integer tick) {
-//        return recordTermRepository.findByTermLessThanAndTickLessThan(term, tick);
-//    }
+    @GetMapping("history/{term}/{tick}")
+    public Flux<RecordTerm> history(@PathVariable Integer term, @PathVariable Integer tick) {
+        return recordRepository.findByTermLessThanAndTickLessThan(term, tick);
+    }
 
     private ResponseEntity<String> createResponse(String message, HttpStatus status) {
         return ResponseEntity

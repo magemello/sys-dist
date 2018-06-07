@@ -25,7 +25,7 @@ public class Epoch {
             log.info("\nReceived a too old term {}, we are in {}", update.term, term);
             return false;
         }
-
+        this.term = update.term;
         this.tick = update.tick;
         this.leader = update.from;
         touch();
