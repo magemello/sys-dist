@@ -22,7 +22,7 @@ public class Epoch {
 
     public boolean update(Update update) {
         if (update.term < term || update.term == term && update.tick <= tick) {
-            log.info("Received a too old term {}, we are in {}", update.term, term);
+            log.info("\nReceived a too old term {}, we are in {}", update.term, term);
             return false;
         }
 
@@ -55,7 +55,7 @@ public class Epoch {
 
     public boolean isExpired() {
         if (System.currentTimeMillis() > end) {
-            log.debug("Timeout expired, need to move on");
+            log.debug("\nTimeout expired, need to move on");
             return true;
         } else {
             return false;

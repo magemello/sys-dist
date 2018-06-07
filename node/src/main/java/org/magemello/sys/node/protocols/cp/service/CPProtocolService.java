@@ -1,5 +1,6 @@
 package org.magemello.sys.node.protocols.cp.service;
 
+import org.magemello.sys.node.controller.DemoController;
 import org.magemello.sys.node.domain.RecordTerm;
 import org.magemello.sys.node.domain.VoteRequest;
 import org.magemello.sys.node.protocols.cp.clients.CPProtocolClient;
@@ -75,18 +76,17 @@ public class CPProtocolService implements ProtocolService {
     @Override
     public Mono<ResponseEntity> set(String key, String value) throws Exception {
         if (status == follower) {
-            log.info("- Forwarding write request of {} to leader {} for value {}", key, epoch.getLeader(), value);
-
+            log.info("\nForwarding write request of {} to leader {} for value {}", key, epoch.getLeader(), value);
             ClientResponse clientResponse = cpProtocolClient.forwardDataToLeader(key, value, epoch.getLeader()).block();
-            log.info("- Status write request {} ", clientResponse.statusCode());
+            log.info("\nWrite request result: {}\n", clientResponse.statusCode());
 
             return Mono.just(ResponseEntity.status(clientResponse.statusCode()).build());
         } else if (status == leader) {
-            log.info("- Receive write request of {} for value {}", key, value);
+            log.info("\nReceived write request of {} for value {}\n", key, value);
             updateBuffer = new RecordTerm(key, value, epoch.getTerm(), epoch.getTick());
             return Mono.just(ResponseEntity.status(HttpStatus.OK).build());
         } else {
-            log.info("- No leader elected yet");
+            log.info("\nNo leader elected yet\n");
             return Mono.just(ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body("No leader at the moment!"));
         }
 
@@ -126,11 +126,17 @@ public class CPProtocolService implements ProtocolService {
 
     @Override
     public void start() {
-        log.info("CP mode (majority quorum, raft)");
+        log.info("\nCP mode (majority quorum, raft)\n");
         this.quorum = 1 + p2pService.getPeers().size() / 2;
         this.epoch = new Epoch(0);
-        this.status = follower;
         this.votes = new VotingBoard();
+        this.status = new Runnable() {            
+            @Override
+            public void run() {
+                DemoController.clr();
+                status=follower;
+            }
+        };
 
         ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
         scheduleNext(scheduler, new Runnable() {
@@ -140,7 +146,7 @@ public class CPProtocolService implements ProtocolService {
                     status.run();
                     scheduleNext(scheduler, this);
                 } else {
-                    log.info("Shutting down");
+                    log.info("\nShutting down");
                 }
             }
         });
@@ -173,10 +179,10 @@ public class CPProtocolService implements ProtocolService {
         boolean success = epoch.update(beat);
         if (success) {
             if (status == candidate) {
-                log.info("Ops! Somebody is already in charge, election aborted!");
+                log.info("\nOps! Somebody is already in charge, election aborted!\n");
                 switchToFollower();
             } else if (status == leader) {
-                log.info("Ops! Two leaders here? Let's start an election!");
+                log.info("\nOps! Two leaders here? Let's start an election!\n");
                 switchToCandidate();
             }
         }
@@ -218,7 +224,7 @@ public class CPProtocolService implements ProtocolService {
         @Override
         public void run() {
             if (epoch.isExpired()) {
-                log.info("No leader is present in term {}: time for an election!", epoch.getTerm());
+                log.info("\nNo leader is present in term {}: time for an election!", epoch.getTerm());
                 switchToCandidate();
             }
         }
@@ -235,7 +241,7 @@ public class CPProtocolService implements ProtocolService {
         @Override
         public void run() {
             if (++count % 10 == 0) {
-                log.info("Nothing happening, let's try another election!");
+                log.info("\nNothing happening, let's try another election!");
                 switchToCandidate();
             }
         }
@@ -250,14 +256,16 @@ public class CPProtocolService implements ProtocolService {
         @Override
         public void run() {
             epoch.nextTick();
-            log.info("Sending beat, term {}, tick {}", epoch.getTerm(), epoch.getTick());
+
             if (updateBuffer != null) {
                 recordTermRepository.save(updateBuffer);
-            }
+            } 
+
+            log.info("\rBeating, term={},tick={}{}", epoch.getTerm(), epoch.getTick(), (updateBuffer != null) ? ",data="+updateBuffer.toString()+"\n" : "");
 
             cpProtocolClient.sendBeat(new Update(serverPort, epoch, updateBuffer), quorum).subscribe(responses -> {
                 if (responses < quorum) {
-                    log.info("I was able to end the beat only to {} followers for term {}", responses, epoch.getTerm());
+                    log.info("\nI was able to end the beat only to {} followers for term {}", responses, epoch.getTerm());
                     switchToFollower();
                 }
                 updateBuffer = null;
@@ -282,7 +290,7 @@ public class CPProtocolService implements ProtocolService {
 
         cpProtocolClient.requestVotes(epoch.getTerm(), quorum).subscribe(voteQuorum -> {
             if (voteQuorum >= quorum) {
-                log.info("I was elected leader for term {}!", epoch.getTerm());
+                log.info("\nI was elected leader for term {}!", epoch.getTerm());
                 switchStatus(leader);
             }
         });
@@ -291,7 +299,7 @@ public class CPProtocolService implements ProtocolService {
 
     private void switchStatus(Runnable newStatus) {
         if (status != newStatus) {
-            log.info("Switching from status {} to status {}", status, newStatus);
+            log.info("\nSwitching from status {} to status {}\n", status, newStatus);
             status = newStatus;
         }
     }

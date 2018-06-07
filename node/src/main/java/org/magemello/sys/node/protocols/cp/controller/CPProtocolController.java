@@ -19,9 +19,6 @@ public class CPProtocolController {
     @Autowired
     private CPProtocolService cpProtocolService;
 
-//    @Autowired
-//    private RecordTermRepository recordTermRepository;
-
     @PostMapping("update")
     public ResponseEntity<String> update(@RequestBody Update update) {
         ResponseEntity<String> res;
@@ -31,7 +28,7 @@ public class CPProtocolController {
             res = createResponse("CP RAFT Update - Update failed: " + update.toString(), HttpStatus.NOT_FOUND);
         }
 
-        log.info("/update {}: {} ", update.toString(), asOkay(res, "good", "fail"));
+        log.info("\r/update {}: {} ", update.toString(), asOkay(res, "good", "fail"));
         return res;
     }
 
@@ -44,7 +41,7 @@ public class CPProtocolController {
             res = createResponse("CP RAFT Vote - Voting no: " + vote.toString(), HttpStatus.NOT_FOUND);
         }
 
-        log.info("/vote request from {}, term {}: {} ", vote.getPort(), vote.getTerm(), asOkay(res, "yes", "no"));
+        log.info("\n/vote request from {}, term {}: {} ", vote.getPort(), vote.getTerm(), asOkay(res, "yes", "no"));
         return res;
     }
 

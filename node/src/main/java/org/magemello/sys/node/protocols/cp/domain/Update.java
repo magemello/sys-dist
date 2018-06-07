@@ -22,9 +22,9 @@ public class Update {
     public String toString() {
         return  "{"
                 + "from=" + from +
-                ", term=" + term +
-                ", tick=" + tick +
-                ", data=" + data +
+                ",term=" + term +
+                ",tick=" + tick +
+                ",data=" + data +
                 '}';
     }
 }

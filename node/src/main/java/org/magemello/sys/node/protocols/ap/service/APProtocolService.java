@@ -234,16 +234,13 @@ public class APProtocolService implements ProtocolService {
         };
     }
 
-    // FIXME
     private List<Record> getPeersRecords(List<ResponseEntity<Record>> responseEntity, String key) {
-        List<Record> records = responseEntityToRecords(responseEntity);
-        records.add(recordRepository.findByKey(key).get());
-        return records;
-    }
+        List<Record> records = responseEntity.stream()
+            .map(responseEntityFromStream -> responseEntityFromStream.getBody())
+            .collect(Collectors.toList());
 
-    private List<Record> responseEntityToRecords(List<ResponseEntity<Record>> responseEntity) {
-        return responseEntity.stream().map(responseEntityFromStream -> responseEntityFromStream.getBody())
-                .collect(Collectors.toList());
+        records.add(recordRepository.findByKey(key).orElse(null));
+        return records;
     }
 
     private Map.Entry<Record, Integer> getEntryRecordWithHighestQuorum(List<ResponseEntity<Record>> responseEntity, String key) {

@@ -40,7 +40,7 @@ public class NodeApplication {
     public ApplicationListener<ContextRefreshedEvent> startupLoggingListener() {
         return event -> {
             if (serverDelay != 0)
-                log.info("...and this server is slow! ({} msec)", serverDelay);
+                log.info("\n...and this server is slow! ({} msec)\n", serverDelay);
         };
     }
 

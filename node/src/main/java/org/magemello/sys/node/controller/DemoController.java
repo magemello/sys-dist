@@ -37,13 +37,13 @@ public class DemoController {
             .writer()
             .withDefaultPrettyPrinter();
         
-        log.info("===========================");
-        log.info("Current database contents:");
+        log.info("\n\n===========================");
+        log.info("\nCurrent database contents:");
         Iterable<Record> records = recordRepository.findAll();
         for (Record record : records) {
-            log.info(writer.writeValueAsString(record));
+            log.info("\n"+writer.writeValueAsString(record));
         }
-        log.info("");
+        log.info("\n");
 
         return new ResponseEntity<>(HttpStatus.OK);
     }
@@ -52,11 +52,15 @@ public class DemoController {
     public ResponseEntity<?> cleanScreen() {
         protocolService.onCleanup();
         
-        for(int i=0; i<100; i++) {
-            log.info("");
-        }
+        clr();
         
         return new ResponseEntity<>(HttpStatus.OK);
+    }
+
+    public static void clr() {
+        for(int i=0; i<100; i++) {
+            log.info("\n");
+        }
     }
 
     @PostMapping("/mode/{name}")
