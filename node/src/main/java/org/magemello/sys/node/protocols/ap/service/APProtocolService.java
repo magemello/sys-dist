@@ -75,7 +75,7 @@ public class APProtocolService implements ProtocolService {
                     clientResponse.statusCode());
         });
 
-        Record localRecord = recordRepository.findByKey(record.getKey());
+        Record localRecord = recordRepository.findByKey(record.getKey()).orElse(null);
         if (localRecord == null || !localRecord.equals(record)) {
             recordRepository.save(record);
         }
@@ -146,7 +146,7 @@ public class APProtocolService implements ProtocolService {
 
     public Record read(String key) {
         log.info("- read record for key {} ", key);
-        return recordRepository.findByKey(key);
+        return recordRepository.findByKey(key).orElse(null);
     }
 
     private Mono<ResponseEntity> handleSet(Transaction transaction) {
@@ -234,9 +234,10 @@ public class APProtocolService implements ProtocolService {
         };
     }
 
+    // FIXME
     private List<Record> getPeersRecords(List<ResponseEntity<Record>> responseEntity, String key) {
         List<Record> records = responseEntityToRecords(responseEntity);
-        records.add(recordRepository.findByKey(key));
+        records.add(recordRepository.findByKey(key).get());
         return records;
     }
 

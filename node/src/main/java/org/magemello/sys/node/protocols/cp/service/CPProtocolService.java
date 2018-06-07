@@ -45,7 +45,7 @@ public class CPProtocolService implements ProtocolService {
     private P2PService p2pService;
 
     @Autowired
-    private RecordTermRepository recordTermRepository;
+    private RecordRepository recordTermRepository;
 
     @Autowired
     private CPProtocolClient cpProtocolClient;
