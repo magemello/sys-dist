@@ -15,16 +15,13 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.ClientResponse;
-
 import reactor.core.publisher.Mono;
-
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-
 import org.magemello.sys.node.repository.*;
 
 import static org.magemello.sys.node.protocols.cp.domain.Utils.DEFAULT_TICK_TIMEOUT;
@@ -53,14 +50,13 @@ public class CPProtocolService implements ProtocolService {
 
     private Integer quorum;
 
-
     private volatile Epoch epoch;
+
     private volatile Runnable status;
 
     private VotingBoard votes;
 
-    private RecordTerm dataBuffer;
-
+    private RecordTerm updateBuffer;
 
 //    private String leaderAddress;
 
@@ -68,7 +64,7 @@ public class CPProtocolService implements ProtocolService {
     public Mono<ResponseEntity> get(String key) {
         Optional<RecordTerm> record = recordTermRepository.findByKey(key);
         if (record.isPresent()) {
-            return Mono.just(ResponseEntity.status(HttpStatus.OK).body("QUORUM " + record.get().toString()));
+            return Mono.just(ResponseEntity.status(HttpStatus.OK).body("RAFT " + record.get().toString()));
         } else {
             return Mono.just(ResponseEntity.status(HttpStatus.NOT_FOUND).build());
         }
@@ -85,6 +81,7 @@ public class CPProtocolService implements ProtocolService {
             return Mono.just(ResponseEntity.status(clientResponse.statusCode()).build());
         } else if (status == leader) {
             log.info("- Receive write request of {} for value {}", key, value);
+            updateBuffer = new RecordTerm(key, value, epoch.getTerm(), epoch.getTick());
             return Mono.just(ResponseEntity.status(HttpStatus.OK).build());
         } else {
             log.info("- No leader elected yet");
@@ -220,15 +217,6 @@ public class CPProtocolService implements ProtocolService {
         return status == follower;
     }
 
-    public boolean setData(String key, String value) {
-        if (dataBuffer == null) {
-            dataBuffer = new RecordTerm(key, value);
-            return true;
-        } else {
-            return false;
-        }
-    }
-
     private Runnable follower = new Runnable() {
         @Override
         public void run() {
@@ -266,17 +254,16 @@ public class CPProtocolService implements ProtocolService {
         public void run() {
             epoch.nextTick();
             log.info("Sending beat, term {}, tick {}", epoch.getTerm(), epoch.getTick());
-            if (dataBuffer != null) {
-                dataBuffer.setTermAndTick(epoch.getTerm(), epoch.getTick());
-                recordTermRepository.save(dataBuffer);
+            if (updateBuffer != null) {
+                recordTermRepository.save(updateBuffer);
             }
 
-            cpProtocolClient.sendBeat(new Update(serverPort, epoch, dataBuffer), quorum).subscribe(responses -> {
+            cpProtocolClient.sendBeat(new Update(serverPort, epoch, updateBuffer), quorum).subscribe(responses -> {
                 if (responses < quorum) {
                     log.info("I was able to end the beat only to {} followers for term {}", responses, epoch.getTerm());
                     switchToFollower();
                 }
-                dataBuffer = null;
+                updateBuffer = null;
             });
         }
 

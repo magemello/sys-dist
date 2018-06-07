@@ -20,11 +20,6 @@ public class RecordTerm {
     public RecordTerm() {
     }
 
-    public RecordTerm(String key, String value) {
-        this.key = key;
-        this.value = value;
-    }
-
     public RecordTerm(String key, String value, Integer term, Integer tick) {
         this.key = key;
         this.value = value;
@@ -46,11 +41,6 @@ public class RecordTerm {
 
     public Integer getTick() {
         return tick;
-    }
-
-    public void setTermAndTick(Integer term, Integer tick) {
-        this.term = term;
-        this.tick = tick;
     }
 
     @Override
