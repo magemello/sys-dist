@@ -162,8 +162,9 @@ public class CPProtocolService implements ProtocolService {
 
         if ((currentTerm != beat.term && beat.tick != 1) || (currentTerm == beat.term && beat.tick - currentTick > 1)) {
             log.info("\nAsking history from term {} and tick {} to {}\n", epoch.getTerm(), epoch.getTick(), beat.from);
-            cpProtocolClient.history(epoch.getTerm(), epoch.getTick(), beat.from).subscribe(recordTerm -> {
-                recordRepository.save(recordTerm);
+            cpProtocolClient.history(epoch.getTerm(), epoch.getTick(), beat.from).subscribe(record -> {
+                log.info("\n- history: {}\n", record);
+                recordRepository.save(record);
             });
             return true;
         } else {
@@ -263,7 +264,7 @@ public class CPProtocolService implements ProtocolService {
 
     private void switchStatus(Runnable newStatus) {
         if (status != newStatus) {
-            log.info("\nSwitching from status {} to status {}\n", status, newStatus);
+            log.info("\nSwitching from status {} to status {}\n\n", status, newStatus);
             status = newStatus;
         }
     }

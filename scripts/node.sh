@@ -15,4 +15,4 @@ iden=$(echo $1-3000 | bc)
 echo Going to start 127.0.0.$iden:$1
 
 cd ../node
-mvn $delay -Dserver.address=127.0.0.$iden -Dserver.port=$1 spring-boot:run
+java $delay -Dserver.address=127.0.0.$iden -Dserver.port=$1 -jar target/node-0.0.1-SNAPSHOT.jar

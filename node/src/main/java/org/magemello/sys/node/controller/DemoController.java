@@ -43,6 +43,7 @@ public class DemoController {
         for (Record record : records) {
             log.info("\n"+writer.writeValueAsString(record));
         }
+        log.info("\n===========================");
         log.info("\n\n");
 
         return new ResponseEntity<>(HttpStatus.OK);

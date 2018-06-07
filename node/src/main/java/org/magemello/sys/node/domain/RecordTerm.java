@@ -32,7 +32,7 @@ public class RecordTerm extends Record{
     public String toString() {
         return "{" +
                 "key='" + super.getKey() + '\'' +
-                ", value='" + super.getValue() + '\'' +
+                ", val='" + super.getValue() + '\'' +
                 ", term=" + term +
                 ", tick=" + tick +
                 '}';
