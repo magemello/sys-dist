@@ -139,6 +139,9 @@ public class CPProtocolService implements ProtocolService {
     }
 
     public boolean vote(VoteRequest vote) {
+        if (status == leader || status == follower) {
+            return false;
+        }
         return handleVoteRequest(vote);
     }
 
@@ -167,8 +170,7 @@ public class CPProtocolService implements ProtocolService {
         }
 
         if ((currentTerm != beat.term && beat.tick != 1) || (currentTerm == beat.term && beat.tick - currentTick > 1)) {
-//            log.info("-----Sync {} {} - {} {}", epoch.getTerm(), epoch.getTick(), beat.term, beat.tick);
-            log.info("Asking history from term {} and tick {} to {}", epoch.getTerm(), epoch.getTick(), beat.from);
+            log.info("\nAsking history from term {} and tick {} to {}\n", epoch.getTerm(), epoch.getTick(), beat.from);
             cpProtocolClient.history(epoch.getTerm(), epoch.getTick(), beat.from).subscribe(recordTerm -> {
                 recordRepository.save(recordTerm);
             });

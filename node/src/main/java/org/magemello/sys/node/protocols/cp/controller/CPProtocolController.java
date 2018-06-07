@@ -13,6 +13,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
 
+import java.util.ArrayList;
+
 @RestController()
 @RequestMapping("cp")
 public class CPProtocolController {
@@ -57,8 +59,8 @@ public class CPProtocolController {
 
 
     @GetMapping("history/{term}/{tick}")
-    public Flux<RecordTerm> history(@PathVariable Integer term, @PathVariable Integer tick) {
-        return recordRepository.findByTermLessThanAndTickLessThan(term, tick);
+    public ArrayList<RecordTerm> history(@PathVariable Integer term, @PathVariable Integer tick) {
+        return recordRepository.findByTermLessThanEqualAndTickLessThanEqual(term, tick);
     }
 
     private ResponseEntity<String> createResponse(String message, HttpStatus status) {
