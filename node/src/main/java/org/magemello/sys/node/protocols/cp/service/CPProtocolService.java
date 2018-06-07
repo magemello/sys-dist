@@ -20,9 +20,12 @@ import reactor.core.publisher.Mono;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+
+import org.magemello.sys.node.repository.*;
 
 import static org.magemello.sys.node.protocols.cp.domain.Utils.DEFAULT_TICK_TIMEOUT;
 import static org.magemello.sys.node.protocols.cp.domain.Utils.randomize;
@@ -42,8 +45,8 @@ public class CPProtocolService implements ProtocolService {
     @Autowired
     private P2PService p2pService;
 
-//    @Autowired
-//    private RecordTermRepository recordTermRepository;
+    @Autowired
+    private RecordTermRepository recordTermRepository;
 
     @Autowired
     private CPProtocolClient cpProtocolClient;
@@ -63,15 +66,12 @@ public class CPProtocolService implements ProtocolService {
 
     @Override
     public Mono<ResponseEntity> get(String key) {
-        return Mono.just(ResponseEntity.status(HttpStatus.NOT_FOUND).build());
-
-
-//        RecordTerm record = recordTermRepository.findByKey(key);
-//        if (record == null) {
-//            return Mono.just(ResponseEntity.status(HttpStatus.NOT_FOUND).build());
-//        } else {
-//            return Mono.just(ResponseEntity.status(HttpStatus.OK).body("QUORUM " + record.toString()));
-//        }
+        Optional<RecordTerm> record = recordTermRepository.findByKey(key);
+        if (record.isPresent()) {
+            return Mono.just(ResponseEntity.status(HttpStatus.OK).body("QUORUM " + record.get().toString()));
+        } else {
+            return Mono.just(ResponseEntity.status(HttpStatus.NOT_FOUND).build());
+        }
     }
 
     @Override
@@ -90,7 +90,7 @@ public class CPProtocolService implements ProtocolService {
             log.info("- No leader elected yet");
             return Mono.just(ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body("No leader at the moment!"));
         }
-        
+
 //        if (amITheLeader()) {
 //            log.info("- I'm the leader scheduling data for the next beat");
 //
@@ -266,8 +266,10 @@ public class CPProtocolService implements ProtocolService {
         public void run() {
             epoch.nextTick();
             log.info("Sending beat, term {}, tick {}", epoch.getTerm(), epoch.getTick());
-//            dataBuffer.setTermAndTick(epoch.getTerm(), epoch.getTick());
-//            recordTermRepository.save(dataBuffer);
+            if (dataBuffer != null) {
+                dataBuffer.setTermAndTick(epoch.getTerm(), epoch.getTick());
+                recordTermRepository.save(dataBuffer);
+            }
 
             cpProtocolClient.sendBeat(new Update(serverPort, epoch, dataBuffer), quorum).subscribe(responses -> {
                 if (responses < quorum) {
