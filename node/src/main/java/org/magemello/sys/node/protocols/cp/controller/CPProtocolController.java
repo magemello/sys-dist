@@ -22,8 +22,8 @@ public class CPProtocolController {
     @Autowired
     private CPProtocolService cpProtocolService;
 
-    @Autowired
-    private RecordTermRepository recordTermRepository;
+//    @Autowired
+//    private RecordTermRepository recordTermRepository;
 
     @PostMapping("update")
     public ResponseEntity<String> update(@RequestBody Update update) {
@@ -56,10 +56,10 @@ public class CPProtocolController {
     }
 
 
-    @GetMapping("history/{term}/{tick}")
-    public Flux<RecordTerm> history(@PathVariable Integer term, @PathVariable Integer tick) {
-        return recordTermRepository.findByTermLessThanAndTickLessThan(term, tick);
-    }
+//    @GetMapping("history/{term}/{tick}")
+//    public Flux<RecordTerm> history(@PathVariable Integer term, @PathVariable Integer tick) {
+//        return recordTermRepository.findByTermLessThanAndTickLessThan(term, tick);
+//    }
 
     private ResponseEntity<String> createResponse(String message, HttpStatus status) {
         return ResponseEntity

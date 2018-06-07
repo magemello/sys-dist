@@ -28,8 +28,8 @@ public class CPProtocolService implements ProtocolService {
     @Value("${server.address}")
     private String serverAddress;
 
-    @Autowired
-    private RecordTermRepository recordTermRepository;
+//    @Autowired
+//    private RecordTermRepository recordTermRepository;
 
     @Autowired
     private CPProtocolClient client;
@@ -37,17 +37,19 @@ public class CPProtocolService implements ProtocolService {
     @Autowired
     private RaftService raft;
 
-    private String leaderAddress;
+//    private String leaderAddress;
 
     @Override
     public Mono<ResponseEntity> get(String key) {
+        return Mono.just(ResponseEntity.status(HttpStatus.NOT_FOUND).build());
+        
 
-        RecordTerm record = recordTermRepository.findByKey(key);
-        if (record == null) {
-            return Mono.just(ResponseEntity.status(HttpStatus.NOT_FOUND).build());
-        } else {
-            return Mono.just(ResponseEntity.status(HttpStatus.OK).body("QUORUM " + record.toString()));
-        }
+//        RecordTerm record = recordTermRepository.findByKey(key);
+//        if (record == null) {
+//            return Mono.just(ResponseEntity.status(HttpStatus.NOT_FOUND).build());
+//        } else {
+//            return Mono.just(ResponseEntity.status(HttpStatus.OK).body("QUORUM " + record.toString()));
+//        }
     }
 
     @Override
@@ -66,14 +68,14 @@ public class CPProtocolService implements ProtocolService {
             }
         }
 
-        if (raft.amIAFollower()) {
-            log.info("- Forwarding write request of {} to leader {} for value {}", key, leaderAddress, value);
-
-            ClientResponse clientResponse = client.forwardDataToLeader(key, value, leaderAddress).block();
-            log.info("- Status write request {} ", clientResponse.statusCode());
-
-            return Mono.just(ResponseEntity.status(clientResponse.statusCode()).build());
-        }
+//        if (raft.amIAFollower()) {
+//            log.info("- Forwarding write request of {} to leader {} for value {}", key, leaderAddress, value);
+//
+//            ClientResponse clientResponse = client.forwardDataToLeader(key, value, leaderAddress).block();
+//            log.info("- Status write request {} ", clientResponse.statusCode());
+//
+//            return Mono.just(ResponseEntity.status(clientResponse.statusCode()).build());
+//        }
 
         log.info("- No leader elected yet");
         return Mono.just(ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body("No leader at the moment!"));
@@ -104,7 +106,7 @@ public class CPProtocolService implements ProtocolService {
     }
 
     public boolean beat(Update update) {
-        this.leaderAddress = serverAddress + update.from.toString();
+//        this.leaderAddress = serverAddress + update.from.toString();
         return raft.handleBeat(update);
     }
 }

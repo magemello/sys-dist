@@ -40,8 +40,8 @@ public class RaftService {
     @Autowired
     private CPProtocolClient api;
 
-    @Autowired
-    private RecordTermRepository recordTermRepository;
+//    @Autowired
+//    private RecordTermRepository recordTermRepository;
 
     private Integer quorum;
 
@@ -65,27 +65,40 @@ public class RaftService {
             if (status == candidate) {
                 log.info("Ops! Somebody is already in charge, election aborted!");
                 switchToFollower();
-            } else if (amITheLeader()) {
+            } else if (status == leader) {
                 log.info("Ops! Two leaders here? Let's start an election!");
                 switchToCandidate();
-                return false;
             }
-        } else {
-            return false;
         }
-
-        if ((epoch.getTerm() != beat.term && beat.tick != 1) || (epoch.getTerm() == beat.term && beat.tick - epoch.getTick() > 1)) {
-            log.info("Asking history from term {} and tick {} to {}", epoch.getTerm(), epoch.getTick(), beat.from);
-            String leaderAddress = serverAddress + beat.from.toString();
-
-            api.history(epoch.getTerm(), epoch.getTick(), leaderAddress).subscribe(recordTerm -> {
-                recordTermRepository.save(recordTerm);
-            });
-            return true;
-        } else {
-            recordTermRepository.save(beat.data);
-        }
-        return false;
+        return success;
+        
+//        boolean success = epoch.update(beat);
+//        if (success) {
+//            if (status == candidate) {
+//                log.info("Ops! Somebody is already in charge, election aborted!");
+//                switchToFollower();
+//            } else if (amITheLeader()) {
+//                log.info("Ops! Two leaders here? Let's start an election!");
+//                switchToCandidate();
+//                return false;
+//            }
+//        } else {
+//            return false;
+//        }
+//
+//        if ((epoch.getTerm() != beat.term && beat.tick != 1) || (epoch.getTerm() == beat.term && beat.tick - epoch.getTick() > 1)) {
+//            log.info("Asking history from term {} and tick {} to {}", epoch.getTerm(), epoch.getTick(), beat.from);
+//            String leaderAddress = serverAddress + beat.from.toString();
+//
+//            api.history(epoch.getTerm(), epoch.getTick(), leaderAddress).subscribe(recordTerm -> {
+//                recordTermRepository.save(recordTerm);
+//            });
+//            return true;
+//        } else {
+//            recordTermRepository.save(beat.data);
+//        }
+//
+//        return true;
     }
 
     public boolean amITheLeader() {
@@ -142,8 +155,8 @@ public class RaftService {
         public void run() {
             epoch.nextTick();
             log.info("Sending beat, term {}, tick {}", epoch.getTerm(), epoch.getTick());
-            dataBuffer.setTermAndTick(epoch.getTerm(), epoch.getTick());
-            recordTermRepository.save(dataBuffer);
+//            dataBuffer.setTermAndTick(epoch.getTerm(), epoch.getTick());
+//            recordTermRepository.save(dataBuffer);
 
             api.sendBeat(new Update(serverPort, epoch, dataBuffer), quorum).subscribe(responses -> {
                 if (responses < quorum) {
