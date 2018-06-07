@@ -61,8 +61,6 @@ public class CPProtocolService implements ProtocolService {
 
     private RecordTerm updateBuffer;
 
-//    private String leaderAddress;
-
     @Override
     public Mono<ResponseEntity> get(String key) {
         Optional<RecordTerm> record = recordRepository.findByKey(key);
