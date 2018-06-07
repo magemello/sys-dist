@@ -41,6 +41,10 @@ public class Epoch {
         return tick;
     }
 
+    public int getLeader() {
+        return leader;
+    }
+
     public void nextTick() {
         tick++;
     }

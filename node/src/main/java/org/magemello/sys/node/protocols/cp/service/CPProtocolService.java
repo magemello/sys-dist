@@ -14,6 +14,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.web.reactive.function.client.ClientResponse;
+
 import reactor.core.publisher.Mono;
 
 import java.util.HashMap;
@@ -74,20 +76,35 @@ public class CPProtocolService implements ProtocolService {
 
     @Override
     public Mono<ResponseEntity> set(String key, String value) throws Exception {
-        if (amITheLeader()) {
-            log.info("- I'm the leader scheduling data for the next beat");
+        if (status == follower) {
+            log.info("- Forwarding write request of {} to leader {} for value {}", key, epoch.getLeader(), value);
 
-            if (setData(key, value)) {
-                log.info("- Data scheduled");
+            ClientResponse clientResponse = cpProtocolClient.forwardDataToLeader(key, value, epoch.getLeader()).block();
+            log.info("- Status write request {} ", clientResponse.statusCode());
 
-                return Mono.just(ResponseEntity.status(HttpStatus.OK).build());
-            } else {
-                log.info("- Buffer full data not scheduled");
-
-                return Mono.just(ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).build());
-            }
+            return Mono.just(ResponseEntity.status(clientResponse.statusCode()).build());
+        } else if (status == leader) {
+            log.info("- Receive write request of {} for value {}", key, value);
+            return Mono.just(ResponseEntity.status(HttpStatus.OK).build());
+        } else {
+            log.info("- No leader elected yet");
+            return Mono.just(ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body("No leader at the moment!"));
         }
-
+        
+//        if (amITheLeader()) {
+//            log.info("- I'm the leader scheduling data for the next beat");
+//
+//            if (setData(key, value)) {
+//                log.info("- Data scheduled");
+//
+//                return Mono.just(ResponseEntity.status(HttpStatus.OK).build());
+//            } else {
+//                log.info("- Buffer full data not scheduled");
+//
+//                return Mono.just(ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).build());
+//            }
+//        }
+//
 //        if (amIAFollower()) {
 //            log.info("- Forwarding write request of {} to leader {} for value {}", key, leaderAddress, value);
 //
@@ -97,8 +114,6 @@ public class CPProtocolService implements ProtocolService {
 //            return Mono.just(ResponseEntity.status(clientResponse.statusCode()).build());
 //        }
 
-        log.info("- No leader elected yet");
-        return Mono.just(ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body("No leader at the moment!"));
     }
 
     @Override
@@ -147,7 +162,6 @@ public class CPProtocolService implements ProtocolService {
     }
 
     public boolean beat(Update update) {
-//        this.leaderAddress = serverAddress + update.from.toString();
         return handleBeat(update);
     }
 

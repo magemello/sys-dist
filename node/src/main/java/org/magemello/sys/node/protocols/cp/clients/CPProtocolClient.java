@@ -30,10 +30,10 @@ public class CPProtocolClient {
     @Value("${server.port}")
     private String serverPort;
 
-    public Mono<ClientResponse> forwardDataToLeader(String key, String value, String leaderAddress) {
+    public Mono<ClientResponse> forwardDataToLeader(String key, String value, int port) {
         return WebClient.create()
                 .post()
-                .uri("http://" + leaderAddress + "/storage/" + key + "/" + value)
+                .uri("http://127.0.0.1:" + port + "/storage/" + key + "/" + value)
                 .accept(MediaType.APPLICATION_JSON)
                 .exchange()
                 .onErrorResume(throwable -> Mono.just(ClientResponse.create(HttpStatus.BAD_GATEWAY).build()));
