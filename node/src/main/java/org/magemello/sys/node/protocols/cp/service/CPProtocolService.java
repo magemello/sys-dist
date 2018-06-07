@@ -104,13 +104,7 @@ public class CPProtocolService implements ProtocolService {
         this.quorum = 1 + p2pService.getPeers().size() / 2;
         this.epoch = new Epoch(0);
         this.votes = new VotingBoard();
-        this.status = new Runnable() {
-            @Override
-            public void run() {
-                DemoController.clr();
-                status = follower;
-            }
-        };
+        this.status = follower;
 
         ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
         scheduleNext(scheduler, new Runnable() {
@@ -136,20 +130,15 @@ public class CPProtocolService implements ProtocolService {
         }
     }
 
-    public boolean vote(VoteRequest vote) {
+    public boolean handleVoteRequest(VoteRequest vote) {
         if (status == leader || status == follower) {
             return false;
         }
-        return handleVoteRequest(vote);
-    }
-
-    public boolean beat(Update update) {
-        return handleBeat(update);
-    }
-
-    public boolean handleVoteRequest(VoteRequest vote) {
         epoch.touch();
-        return votes.getVote(vote);
+
+        boolean res = votes.getVote(vote);
+        log.info("\n/vote request from {}, term {}: {}", vote.getPort(), vote.getTerm(), res ? "yes":"no");
+        return res;
     }
 
     public boolean handleBeat(Update beat) {
@@ -165,6 +154,10 @@ public class CPProtocolService implements ProtocolService {
                 log.info("\nOps! Two leaders here? Let's start an election!\n");
                 switchToCandidate();
             }
+
+            if (beat.data != null) {
+                recordRepository.save(beat.data);
+            }
         }
 
         if ((currentTerm != beat.term && beat.tick != 1) || (currentTerm == beat.term && beat.tick - currentTick > 1)) {
@@ -174,8 +167,9 @@ public class CPProtocolService implements ProtocolService {
             });
             return true;
         } else {
+            log.info("\r/update {}", beat.toCompactString());
             if (beat.data != null) {
-                recordRepository.save(beat.data);
+                log.info("\n- with data: {}\n", beat.data);
             }
         }
 
@@ -227,11 +221,11 @@ public class CPProtocolService implements ProtocolService {
         public void run() {
             epoch.nextTick();
 
+            log.info("\rBeating, term={},tick={}", epoch.getTerm(), epoch.getTick());
             if (updateBuffer != null) {
                 recordRepository.save(updateBuffer);
-            }
-
-            log.info("\rBeating, term={},tick={}{}", epoch.getTerm(), epoch.getTick(), (updateBuffer != null) ? ",data=" + updateBuffer.toString() + "\n" : "");
+                log.info("\n- sending data: {}", updateBuffer);
+           }
 
             cpProtocolClient.sendBeat(new Update(serverPort, epoch, updateBuffer), quorum).subscribe(responses -> {
                 if (responses < quorum) {

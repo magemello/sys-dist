@@ -43,7 +43,7 @@ public class DemoController {
         for (Record record : records) {
             log.info("\n"+writer.writeValueAsString(record));
         }
-        log.info("\n");
+        log.info("\n\n");
 
         return new ResponseEntity<>(HttpStatus.OK);
     }
@@ -52,15 +52,11 @@ public class DemoController {
     public ResponseEntity<?> cleanScreen() {
         protocolService.onCleanup();
         
-        clr();
-        
-        return new ResponseEntity<>(HttpStatus.OK);
-    }
-
-    public static void clr() {
         for(int i=0; i<100; i++) {
             log.info("\n");
         }
+
+        return new ResponseEntity<>(HttpStatus.OK);
     }
 
     @PostMapping("/mode/{name}")

@@ -27,4 +27,12 @@ public class Update {
                 ",data=" + data +
                 '}';
     }
+
+    public String toCompactString() {
+        return  "{"
+                + "from=" + from +
+                ",term=" + term +
+                ",tick=" + tick +
+                '}';
+    }
 }

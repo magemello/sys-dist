@@ -29,32 +29,27 @@ public class CPProtocolController {
     @PostMapping("update")
     public ResponseEntity<String> update(@RequestBody Update update) {
         ResponseEntity<String> res;
-        if (cpProtocolService.beat(update)) {
+        if (cpProtocolService.handleBeat(update)) {
             res = createResponse("CP RAFT Update - Update success: " + update.toString(), HttpStatus.OK);
         } else {
             res = createResponse("CP RAFT Update - Update failed: " + update.toString(), HttpStatus.NOT_FOUND);
         }
 
-        log.info("\r/update {}: {} ", update.toString(), asOkay(res, "good", "fail"));
         return res;
     }
 
     @PostMapping("voteforme")
     public ResponseEntity<String> voteforme(@RequestBody VoteRequest vote) {
         ResponseEntity<String> res;
-        if (cpProtocolService.vote(vote)) {
+        if (cpProtocolService.handleVoteRequest(vote)) {
             res = createResponse("CP RAFT Vote - Voting yes: " + vote.toString(), HttpStatus.OK);
         } else {
             res = createResponse("CP RAFT Vote - Voting no: " + vote.toString(), HttpStatus.NOT_FOUND);
         }
 
-        log.info("\n/vote request from {}, term {}: {} ", vote.getPort(), vote.getTerm(), asOkay(res, "yes", "no"));
         return res;
     }
 
-    private String asOkay(ResponseEntity<String> res, String okay, String fail) {
-        return res.getStatusCode() == HttpStatus.OK ? okay : fail;
-    }
 
 
     @GetMapping("history/{term}/{tick}")
