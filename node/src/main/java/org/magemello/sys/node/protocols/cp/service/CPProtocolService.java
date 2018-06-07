@@ -16,12 +16,14 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.ClientResponse;
 import reactor.core.publisher.Mono;
+
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+
 import org.magemello.sys.node.repository.*;
 
 import static org.magemello.sys.node.protocols.cp.domain.Utils.DEFAULT_TICK_TIMEOUT;
@@ -178,22 +180,15 @@ public class CPProtocolService implements ProtocolService {
                 switchToCandidate();
             }
         }
-        return success;
 
-//        boolean success = epoch.update(beat);
-//        if (success) {
-//            if (status == candidate) {
-//                log.info("Ops! Somebody is already in charge, election aborted!");
-//                switchToFollower();
-//            } else if (amITheLeader()) {
-//                log.info("Ops! Two leaders here? Let's start an election!");
-//                switchToCandidate();
-//                return false;
-//            }
-//        } else {
-//            return false;
-//        }
+        if (beat.data != null) {
+            recordTermRepository.save(beat.data);
+        }
+
+//        if ((epoch.getTerm() != beat.term && beat.tick != 1) || (epoch.getTerm() == beat.term && beat.tick - epoch.getTick() > 1)) {
+//            log.info("Sync needed");
 //
+//        }
 //        if ((epoch.getTerm() != beat.term && beat.tick != 1) || (epoch.getTerm() == beat.term && beat.tick - epoch.getTick() > 1)) {
 //            log.info("Asking history from term {} and tick {} to {}", epoch.getTerm(), epoch.getTick(), beat.from);
 //            String leaderAddress = serverAddress + beat.from.toString();
@@ -203,10 +198,12 @@ public class CPProtocolService implements ProtocolService {
 //            });
 //            return true;
 //        } else {
-//            recordTermRepository.save(beat.data);
+//            if (beat.data != null) {
+//                recordTermRepository.save(beat.data);
+//            }
 //        }
-//
-//        return true;
+
+        return success;
     }
 
     public boolean amITheLeader() {

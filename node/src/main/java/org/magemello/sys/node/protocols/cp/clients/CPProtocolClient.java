@@ -33,7 +33,7 @@ public class CPProtocolClient {
     public Mono<ClientResponse> forwardDataToLeader(String key, String value, int port) {
         return WebClient.create()
                 .post()
-                .uri("http://127.0.0.1:" + port + "/storage/" + key + "/" + value)
+                .uri("http://127.0.0." + (port - 3000) + ":" + port + "/storage/" + key + "/" + value)
                 .accept(MediaType.APPLICATION_JSON)
                 .exchange()
                 .onErrorResume(throwable -> Mono.just(ClientResponse.create(HttpStatus.BAD_GATEWAY).build()));
