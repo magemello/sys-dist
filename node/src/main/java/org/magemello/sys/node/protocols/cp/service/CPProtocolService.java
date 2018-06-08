@@ -156,7 +156,7 @@ public class CPProtocolService implements ProtocolService {
             if (beat.data != null) {
                 recordRepository.save(beat.data);
             }
-            
+
             electionTerm = currentTerm;
         }
 
@@ -175,14 +175,6 @@ public class CPProtocolService implements ProtocolService {
         }
 
         return success;
-    }
-
-    public boolean amITheLeader() {
-        return status == leader;
-    }
-
-    public boolean amIAFollower() {
-        return status == follower;
     }
 
     private Runnable follower = new Runnable() {
