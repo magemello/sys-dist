@@ -8,13 +8,13 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.ClientResponse;
-import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.time.Duration;
 import java.util.List;
 import java.util.stream.Collectors;
+import static org.springframework.http.client.reactive.WebClientFactory.newWebClient;
 
 @Service
 public class ACProtocolClient {
@@ -52,7 +52,7 @@ public class ACProtocolClient {
     }
 
     private Mono<ClientResponse> createWebClientPropose(Transaction transaction, String peer) {
-        return WebClient.create()
+        return newWebClient()
                 .post()
                 .uri("http://" + peer + "/ac/propose")
                 .syncBody(transaction)
@@ -63,7 +63,7 @@ public class ACProtocolClient {
     }
 
     private Mono<ClientResponse> createWebClientCommit(String id, String peer) {
-        return WebClient.create()
+        return newWebClient()
                 .post()
                 .uri("http://" + peer + "/ac/commit/" + id)
                 .accept(MediaType.APPLICATION_JSON)
@@ -72,7 +72,7 @@ public class ACProtocolClient {
     }
 
     private Mono<ClientResponse> createWebClientRollBack(String id, String peer) {
-        return WebClient.create()
+        return newWebClient()
                 .post()
                 .uri("http://" + peer + "/ac/rollback/" + id)
                 .accept(MediaType.APPLICATION_JSON)

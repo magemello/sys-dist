@@ -1,5 +1,11 @@
 package org.magemello.sys.node.protocols.ap.clients;
 
+import static org.springframework.http.client.reactive.WebClientFactory.newWebClient;
+
+import java.time.Duration;
+import java.util.List;
+import java.util.stream.Collectors;
+
 import org.magemello.sys.node.domain.Record;
 import org.magemello.sys.node.domain.Transaction;
 import org.magemello.sys.node.service.P2PService;
@@ -10,13 +16,9 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.ClientResponse;
-import org.springframework.web.reactive.function.client.WebClient;
+
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-
-import java.time.Duration;
-import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 public class APProtocolClient {
@@ -72,7 +74,7 @@ public class APProtocolClient {
     }
 
     private Mono<ClientResponse> createWebClientPropose(Transaction transaction, String peer) {
-        return WebClient.create()
+        return newWebClient()
                 .post()
                 .uri("http://" + peer + "/ap/propose")
                 .syncBody(transaction)
@@ -82,7 +84,7 @@ public class APProtocolClient {
     }
 
     private Mono<ClientResponse> createWebClientCommit(String id, String peer) {
-        return WebClient.create()
+        return newWebClient()
                 .post()
                 .uri("http://" + peer + "/ap/commit/" + id)
                 .accept(MediaType.APPLICATION_JSON)
@@ -91,7 +93,7 @@ public class APProtocolClient {
     }
 
     private Mono<ClientResponse> createWebClientRollBack(String id, String peer) {
-        return WebClient.create()
+        return newWebClient()
                 .post()
                 .uri("http://" + peer + "/ap/rollback/" + id)
                 .accept(MediaType.APPLICATION_JSON)
@@ -100,7 +102,7 @@ public class APProtocolClient {
     }
 
     private Mono<ClientResponse> createWebClientRepair(Record record, String peer) {
-        return WebClient.create()
+        return newWebClient()
                 .post()
                 .uri("http://" + peer + "/ap/repair")
                 .syncBody(record)
@@ -110,7 +112,7 @@ public class APProtocolClient {
     }
 
     private Mono<ClientResponse> createWebClientRead(String key, String peer) {
-        return WebClient.create()
+        return newWebClient()
                 .get()
                 .uri("http://" + peer + "/ap/read/" + key)
                 .accept(MediaType.APPLICATION_JSON)

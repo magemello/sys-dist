@@ -1,11 +1,21 @@
 package org.magemello.sys.node.protocols.cp.service;
 
-import org.magemello.sys.node.controller.DemoController;
+import static org.magemello.sys.node.protocols.cp.domain.Utils.DEFAULT_TICK_TIMEOUT;
+import static org.magemello.sys.node.protocols.cp.domain.Utils.randomize;
+
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Optional;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+
 import org.magemello.sys.node.domain.RecordTerm;
 import org.magemello.sys.node.domain.VoteRequest;
 import org.magemello.sys.node.protocols.cp.clients.CPProtocolClient;
 import org.magemello.sys.node.protocols.cp.domain.Epoch;
 import org.magemello.sys.node.protocols.cp.domain.Update;
+import org.magemello.sys.node.repository.RecordRepository;
 import org.magemello.sys.node.service.P2PService;
 import org.magemello.sys.node.service.ProtocolService;
 import org.slf4j.Logger;
@@ -16,19 +26,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.ClientResponse;
+
 import reactor.core.publisher.Mono;
-
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
-
-import org.magemello.sys.node.repository.*;
-
-import static org.magemello.sys.node.protocols.cp.domain.Utils.DEFAULT_TICK_TIMEOUT;
-import static org.magemello.sys.node.protocols.cp.domain.Utils.randomize;
 
 @Service("CP")
 @SuppressWarnings("rawtypes")

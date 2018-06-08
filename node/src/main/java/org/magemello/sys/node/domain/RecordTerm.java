@@ -2,7 +2,6 @@ package org.magemello.sys.node.domain;
 
 
 import javax.persistence.Entity;
-import javax.persistence.Id;
 
 @Entity
 public class RecordTerm extends Record{
