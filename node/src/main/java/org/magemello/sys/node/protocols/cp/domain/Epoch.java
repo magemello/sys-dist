@@ -21,10 +21,10 @@ public class Epoch {
     }
 
     public boolean update(Update update) {
-        if (update.term < term || update.term == term && update.tick <= tick) {
-            log.info("\nReceived a too old term {}, we are in {}", update.term, term);
-            return false;
-        }
+//        if (update.term < term || update.term == term && update.tick <= tick) {
+//            log.info("\nReceived a too old term {}, we are in {}", update.term, term);
+//            return false;
+//        }
         this.term = update.term;
         this.tick = update.tick;
         this.leader = update.from;
