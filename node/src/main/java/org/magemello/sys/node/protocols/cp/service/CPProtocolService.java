@@ -50,12 +50,11 @@ public class CPProtocolService implements ProtocolService {
     @Autowired
     private CPProtocolClient cpProtocolClient;
 
-    private Integer quorum;
-
-    private volatile Epoch epoch;
-
+    private volatile Epoch clock;
     private volatile Runnable status;
 
+    private Integer quorum;
+    private int electionTerm;
     private VotingBoard votes;
 
     private RecordTerm updateBuffer;
@@ -73,14 +72,14 @@ public class CPProtocolService implements ProtocolService {
     @Override
     public Mono<ResponseEntity> set(String key, String value) throws Exception {
         if (status == follower) {
-            log.info("\nForwarding write request of {} to leader {} for value {}", key, epoch.getLeader(), value);
-            ClientResponse clientResponse = cpProtocolClient.forwardDataToLeader(key, value, epoch.getLeader()).block();
+            log.info("\nForwarding write request of {} to leader {} for value {}", key, clock.getLeader(), value);
+            ClientResponse clientResponse = cpProtocolClient.forwardDataToLeader(key, value, clock.getLeader()).block();
             log.info("\nWrite request result: {}\n", clientResponse.statusCode());
 
             return Mono.just(ResponseEntity.status(clientResponse.statusCode()).build());
         } else if (status == leader) {
             log.info("\nReceived write request of {} for value {}\n", key, value);
-            updateBuffer = new RecordTerm(key, value, epoch.getTerm(), epoch.getTick());
+            updateBuffer = new RecordTerm(key, value, clock.getTerm(), clock.getTick());
             return Mono.just(ResponseEntity.status(HttpStatus.OK).build());
         } else {
             log.info("\nNo leader elected yet\n");
@@ -101,7 +100,7 @@ public class CPProtocolService implements ProtocolService {
     public void start() {
         log.info("\nCP mode (majority quorum, raft)\n");
         this.quorum = 1 + p2pService.getPeers().size() / 2;
-        this.epoch = new Epoch(0);
+        this.clock = new Epoch(0);
         this.votes = new VotingBoard();
         this.status = follower;
 
@@ -133,7 +132,7 @@ public class CPProtocolService implements ProtocolService {
         if (status == leader || status == follower) {
             return false;
         }
-        epoch.touch();
+        clock.touch();
 
         boolean res = votes.getVote(vote);
         log.info("\n/vote request from {}, term {}: {}", vote.getPort(), vote.getTerm(), res ? "yes":"no");
@@ -141,10 +140,10 @@ public class CPProtocolService implements ProtocolService {
     }
 
     public boolean handleBeat(Update beat) {
-        Integer currentTerm = epoch.getTerm();
-        Integer currentTick = epoch.getTick();
+        Integer currentTerm = clock.getTerm();
+        Integer currentTick = clock.getTick();
 
-        boolean success = epoch.update(beat);
+        boolean success = clock.update(beat);
         if (success) {
             if (status == candidate) {
                 log.info("\nOps! Somebody is already in charge, election aborted!\n");
@@ -157,17 +156,19 @@ public class CPProtocolService implements ProtocolService {
             if (beat.data != null) {
                 recordRepository.save(beat.data);
             }
+            
+            electionTerm = currentTerm;
         }
 
         if ((currentTerm != beat.term && beat.tick != 1) || (currentTerm == beat.term && beat.tick - currentTick > 1)) {
-            log.info("\nAsking history from term {} and tick {} to {}\n", epoch.getTerm(), epoch.getTick(), beat.from);
-            cpProtocolClient.history(epoch.getTerm(), epoch.getTick(), beat.from).subscribe(record -> {
+            log.info("\nAsking history from term {} and tick {} to {}\n", clock.getTerm(), clock.getTick(), beat.from);
+            cpProtocolClient.history(clock.getTerm(), clock.getTick(), beat.from).subscribe(record -> {
                 log.info("\n- history: {}\n", record);
                 recordRepository.save(record);
             });
             return true;
         } else {
-            log.info("\r/update {}", beat.toCompactString());
+            log.info("\r/update {}            ", beat.toCompactString());
             if (beat.data != null) {
                 log.info("\n- with data: {}\n", beat.data);
             }
@@ -187,8 +188,8 @@ public class CPProtocolService implements ProtocolService {
     private Runnable follower = new Runnable() {
         @Override
         public void run() {
-            if (epoch.isExpired()) {
-                log.info("\nNo leader is present in term {}: time for an election!", epoch.getTerm());
+            if (clock.isExpired()) {
+                log.info("\nNo leader is present in term {}: time for an election!", clock.getTerm());
                 switchToCandidate();
             }
         }
@@ -219,17 +220,17 @@ public class CPProtocolService implements ProtocolService {
     private Runnable leader = new Runnable() {
         @Override
         public void run() {
-            epoch.nextTick();
+            clock.nextTick();
 
-            log.info("\rBeating, term={},tick={}", epoch.getTerm(), epoch.getTick());
+            log.info("\rBeating, term={},tick={}", clock.getTerm(), clock.getTick());
             if (updateBuffer != null) {
                 recordRepository.save(updateBuffer);
                 log.info("\n- sending data: {}", updateBuffer);
            }
 
-            cpProtocolClient.sendBeat(new Update(serverPort, epoch, updateBuffer), quorum).subscribe(responses -> {
+            cpProtocolClient.sendBeat(new Update(serverPort, clock, updateBuffer), quorum).subscribe(responses -> {
                 if (responses < quorum) {
-                    log.info("\nI was able to end the beat only to {} followers for term {}", responses, epoch.getTerm());
+                    log.info("\nI was able to end the beat only to {} followers for term {}", responses, clock.getTerm());
                     switchToFollower();
                 }
                 updateBuffer = null;
@@ -242,29 +243,36 @@ public class CPProtocolService implements ProtocolService {
         }
     };
 
-
     private void switchToFollower() {
         switchStatus(follower);
     }
 
     private void switchToCandidate() {
-        epoch = epoch.nextTerm();
-        votes.put(epoch.getTerm(), serverPort);
+        electionTerm++;
+        votes.put(electionTerm, serverPort);
         switchStatus(candidate);
 
-        cpProtocolClient.requestVotes(epoch.getTerm(), quorum).subscribe(voteQuorum -> {
+        cpProtocolClient.requestVotes(electionTerm, quorum).subscribe(voteQuorum -> {
             if (voteQuorum >= quorum) {
-                log.info("\nI was elected leader for term {}!", epoch.getTerm());
-                switchStatus(leader);
+                log.info("\nI was elected leader for term {}!", clock.getTerm());
+                switchToLeader();
             }
         });
     }
 
+    private void switchToLeader() {
+        clock = new Epoch(electionTerm);
+        switchStatus(leader);
+    }
+
 
     private void switchStatus(Runnable newStatus) {
+        int term = Math.max(electionTerm,  clock.getTerm());
         if (status != newStatus) {
-            log.info("\nSwitching from status {} to status {}\n\n", status, newStatus);
+            log.info("\nSwitching from status {} to status {} in term {}\n\n", status, newStatus, term);
             status = newStatus;
+        } else {
+            log.info("\nStatus {} in term {}\n", status, term);
         }
     }
 

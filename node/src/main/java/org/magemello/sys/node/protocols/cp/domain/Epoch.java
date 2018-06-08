@@ -15,16 +15,17 @@ public class Epoch {
     private int leader;
     private long end;
 
-    public Epoch(int number) {
-        this.term = number;
+    public Epoch(int term) {
+        this.term = term;
         touch();
     }
 
     public boolean update(Update update) {
-//        if (update.term < term || update.term == term && update.tick <= tick) {
-//            log.info("\nReceived a too old term {}, we are in {}", update.term, term);
-//            return false;
-//        }
+        if (update.term < term || update.term == term && update.tick <= tick) {
+            log.info("\nReceived a too old term {}, we are in {}", update.term, term);
+            return false;
+        }
+
         this.term = update.term;
         this.tick = update.tick;
         this.leader = update.from;
@@ -47,10 +48,6 @@ public class Epoch {
 
     public void nextTick() {
         tick++;
-    }
-
-    public Epoch nextTerm() {
-        return new Epoch(term+1);
     }
 
     public boolean isExpired() {
