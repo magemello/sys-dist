@@ -36,14 +36,14 @@ public class ACProtocolService implements ProtocolService {
 
     @Override
     public Mono<ResponseEntity> get(String key) {
-        log.info("AC Service - get for {} ", key);
+        log.info("AC Service - get for {}\n", key);
 
         return handleGet(key);
     }
 
     @Override
     public Mono<ResponseEntity> set(String key, String value) throws Exception {
-        log.info("AC Service - Proposing to peers");
+        log.info("AC Service - Proposing to peers\n");
 
         Transaction transaction = new Transaction(key, value);
         return handleSet(transaction);
@@ -62,11 +62,11 @@ public class ACProtocolService implements ProtocolService {
     public boolean propose(Transaction transaction) {
 
         if (!isAProposalPresentFor(transaction.getKey())) {
-            log.info("- accepted proposal {} for key {}", transaction.get_ID(), transaction.getKey());
+            log.info("- accepted proposal {} for key {}\n", transaction.get_ID(), transaction.getKey());
             writeAheadLog.put(transaction.get_ID(), transaction);
             return true;
         } else {
-            log.info("- refused proposal {} for key {} (already present)", transaction.get_ID(), transaction.getKey());
+            log.info("- refused proposal {} for key {} (already present)\n", transaction.get_ID(), transaction.getKey());
             return false;
         }
     }
@@ -77,10 +77,10 @@ public class ACProtocolService implements ProtocolService {
         if (transaction != null) {
             Record record = recordRepository.save(new Record(transaction.getKey(), transaction.getValue()));
             writeAheadLog.remove(id);
-            log.info("- successfully committed proposal {}", id);
+            log.info("- successfully committed proposal {}\n", id);
             return record;
         } else {
-            log.info("- failed to find proposal {}", id);
+            log.info("- failed to find proposal {}\n", id);
             return null;
         }
     }
@@ -90,9 +90,9 @@ public class ACProtocolService implements ProtocolService {
 
         if (transaction != null) {
             transaction = writeAheadLog.remove(id);
-            log.info("- successfully rolled back proposal {}", id);
+            log.info("- successfully rolled back proposal {}\n", id);
         } else {
-            log.info("- failed to find proposal {}", id);
+            log.info("- failed to find proposal {}\n", id);
         }
 
         return transaction;
@@ -125,13 +125,13 @@ public class ACProtocolService implements ProtocolService {
             private void handleProposeResult(List<ClientResponse> clientResponses) {
 
                 if (isAgreementReached(clientResponses)) {
-                    log.info("Propose for {} succeed sending commit to peers", transaction);
+                    log.info("Propose for {} succeed sending commit to peers\n", transaction);
 
                     acProtocolClient.commit(transaction.get_ID())
                             .subscribe(this::handleCommitResult
                                     , this::handleError);
                 } else {
-                    log.error("Propose for {} failed sending rollback to peers", transaction);
+                    log.error("Propose for {} failed sending rollback to peers\n", transaction);
 
                     acProtocolClient
                             .rollback(transaction.get_ID(),
@@ -146,7 +146,7 @@ public class ACProtocolService implements ProtocolService {
             }
 
             private void handleCommitResult(Boolean resultCommit) {
-                log.info("Peers Committed {}", transaction);
+                log.info("Peers Committed {}\n", transaction);
 
                 recordRepository.save(new Record(transaction.getKey(), transaction.getValue()));
 
@@ -157,7 +157,7 @@ public class ACProtocolService implements ProtocolService {
             }
 
             private void handleRollBackResult(Boolean RollBack) {
-                log.info("Peers Rolled Back {}", transaction);
+                log.info("Peers Rolled Back {}\n", transaction);
 
                 actual.onNext(ResponseEntity
                         .status(HttpStatus.BAD_REQUEST)
@@ -183,7 +183,7 @@ public class ACProtocolService implements ProtocolService {
 
     @Override
     public void start() {
-        log.info("AC mode (two-phase commit)");
+        log.info("AC mode (two-phase commit)\n\n");
     }
 
     @Override

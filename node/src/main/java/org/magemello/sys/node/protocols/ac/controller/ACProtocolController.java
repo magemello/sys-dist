@@ -21,7 +21,7 @@ public class ACProtocolController {
 
     @PostMapping("propose")
     public ResponseEntity<String> propose(@RequestBody Transaction transaction) {
-        log.info("/propose for transaction {}", transaction.get_ID());
+        log.info("/propose for transaction {}\n", transaction.get_ID());
         if (isAValidTransaction(transaction)) {
             if (acProtocolService.propose(transaction)) {
                 return createResponse("AC 2PC Propose - Accepted transaction proposal: " + transaction.toString(), HttpStatus.OK);
@@ -35,7 +35,7 @@ public class ACProtocolController {
 
     @PostMapping("commit/{id}")
     public ResponseEntity<String> commit(@PathVariable String id) {
-        log.info("/commit for transaction {}", id);
+        log.info("/commit for transaction {}\n", id);
 
         Record committedRecord = acProtocolService.commit(id);
         if (committedRecord != null) {
@@ -47,7 +47,7 @@ public class ACProtocolController {
 
     @PostMapping("rollback/{id}")
     public ResponseEntity<String> rollback(@PathVariable String id) {
-        log.info("/rollback for transaction {}", id);
+        log.info("/rollback for transaction {}\n", id);
 
         Transaction transactionRollBack = acProtocolService.rollback(id);
         if (transactionRollBack != null) {
