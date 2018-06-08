@@ -1,5 +1,8 @@
 package org.magemello.sys.node.protocols.cp.clients;
 
+import java.time.Duration;
+import java.util.concurrent.atomic.AtomicLong;
+
 import org.magemello.sys.node.domain.RecordTerm;
 import org.magemello.sys.node.domain.VoteRequest;
 import org.magemello.sys.node.protocols.cp.domain.Update;
@@ -8,15 +11,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.http.client.reactive.WebClientFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.ClientResponse;
-import org.springframework.web.reactive.function.client.WebClient;
+
 import reactor.core.CoreSubscriber;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-
-import java.time.Duration;
-import java.util.concurrent.atomic.AtomicLong;
 
 @Service
 public class CPProtocolClient {
@@ -31,7 +32,7 @@ public class CPProtocolClient {
     private String serverPort;
 
     public Mono<ClientResponse> forwardDataToLeader(String key, String value, Integer port) {
-        return WebClient.create()
+        return WebClientFactory.newWebClient()
                 .post()
                 .uri("http://127.0.0." + (port - 3000) + ":" + port + "/storage/" + key + "/" + value)
                 .accept(MediaType.APPLICATION_JSON)
@@ -77,7 +78,7 @@ public class CPProtocolClient {
     }
 
     private Mono<ClientResponse> createWebClientSendBeat(Update update, String peer) {
-        return WebClient.create()
+        return WebClientFactory.newWebClient()
                 .post()
                 .uri("http://" + peer + "/cp/update")
                 .accept(MediaType.APPLICATION_JSON)
@@ -87,7 +88,7 @@ public class CPProtocolClient {
     }
 
     public Flux<RecordTerm> history(Integer term, Integer tick, Integer port) {
-        return WebClient.create()
+        return WebClientFactory.newWebClient()
                 .get()
                 .uri("http://127.0.0." + (port - 3000) + ":" + port + "/cp/history/" + term.toString() + "/" + tick.toString())
                 .accept(MediaType.APPLICATION_JSON)
@@ -134,7 +135,7 @@ public class CPProtocolClient {
     }
 
     private Mono<ClientResponse> createWebClientVote(Integer term, String peer) {
-        return WebClient.create()
+        return WebClientFactory.newWebClient()
                 .post()
                 .uri("http://" + peer + "/cp/voteforme")
                 .accept(MediaType.APPLICATION_JSON)

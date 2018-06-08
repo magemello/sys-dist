@@ -19,7 +19,6 @@ import org.springframework.web.servlet.HandlerInterceptor;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
-
 @SpringBootApplication
 @EnableWebFlux
 public class NodeApplication {
@@ -28,6 +27,9 @@ public class NodeApplication {
 
     @Value("${server.delay:0}")
     private Long serverDelay;
+
+    @Value("${server.address}")
+    private String serverAddress;
 
     @Autowired
     RecordRepository recordRepository;
@@ -47,6 +49,7 @@ public class NodeApplication {
     }
 
 }
+
 @Configuration
 class WebMvcConfig implements WebMvcConfigurer {
 
@@ -66,7 +69,7 @@ class WebMvcConfig implements WebMvcConfigurer {
             @Override
             public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler)
                     throws Exception {
-                
+
                 String pathInfo = request.getRequestURI();
                 if (!pathInfo.startsWith("/demo"))
                     Thread.sleep(serverDelay);
