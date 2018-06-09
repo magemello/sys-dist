@@ -29,7 +29,7 @@ public class APRecord extends Record {
     public String toString() {
         return "{" +
                 "key='" + super.getKey() + '\'' +
-                ", val='" + super.getValue() + '\'' +
+                ", val='" + super.getVal() + '\'' +
                 ", ts=" + timestamp+
                 '}';
     }

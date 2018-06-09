@@ -227,7 +227,7 @@ public class CPProtocolService implements ProtocolService {
             log.info("\rBeating, term={},tick={}", clock.getTerm(), clock.getTick());
             if (updateBuffer != null) {
                 recordRepository.save(updateBuffer);
-                log.info("\n- sending data: {}", updateBuffer);
+                log.info("\n- sending data: {}\n", updateBuffer);
             }
 
             cpProtocolClient.sendBeat(new Update(serverPort, clock, updateBuffer), quorum).subscribe(responses -> {

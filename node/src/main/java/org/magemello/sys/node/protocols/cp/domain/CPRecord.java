@@ -33,7 +33,7 @@ public class CPRecord extends Record{
     public String toString() {
         return "{" +
                 "key='" + super.getKey() + '\'' +
-                ", val='" + super.getValue() + '\'' +
+                ", val='" + super.getVal() + '\'' +
                 ", term=" + term +
                 ", tick=" + tick +
                 '}';

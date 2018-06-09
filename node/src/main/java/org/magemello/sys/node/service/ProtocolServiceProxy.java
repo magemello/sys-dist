@@ -62,8 +62,6 @@ public class ProtocolServiceProxy implements ProtocolService {
             current.stop();
         }
 
-        recordRepository.deleteAll();
-
         current = requested;
         current.start();
 

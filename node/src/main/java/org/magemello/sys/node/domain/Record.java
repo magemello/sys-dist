@@ -24,7 +24,7 @@ public class Record {
         return key;
     }
 
-    public String getValue() {
+    public String getVal() {
         return val;
     }
 

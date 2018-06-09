@@ -64,6 +64,8 @@ public class DemoController {
     public ResponseEntity<?> switchProtocol(@PathVariable String name) {
         cleanScreen();
         boolean res = protocolService.switchProtocol(name);
+        recordRepository.deleteAll();
+
         return new ResponseEntity<>(res ? HttpStatus.OK : HttpStatus.BAD_REQUEST);
     }
 
