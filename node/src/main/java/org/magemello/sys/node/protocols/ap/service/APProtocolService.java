@@ -1,8 +1,8 @@
 package org.magemello.sys.node.protocols.ap.service;
 
-import org.magemello.sys.node.domain.Record;
-import org.magemello.sys.node.domain.Transaction;
+import org.magemello.sys.node.protocols.ac.domain.Transaction;
 import org.magemello.sys.node.protocols.ap.clients.APProtocolClient;
+import org.magemello.sys.node.protocols.ap.domain.APRecord;
 import org.magemello.sys.node.repository.RecordRepository;
 import org.magemello.sys.node.service.ProtocolService;
 import org.slf4j.Logger;
@@ -45,12 +45,12 @@ public class APProtocolService implements ProtocolService {
     public Mono<ResponseEntity> get(String key) {
         log.info("AP Service - get for {} ", key);
 
-        List<ResponseEntity<Record>> responseEntity = apProtocolClient.read(key).collectList().block();
+        List<ResponseEntity<APRecord>> responseEntity = apProtocolClient.read(key).collectList().block();
 
-        Map.Entry<Record, Integer> entryRecord = getEntryRecordWithHighestQuorum(responseEntity, key);
+        Map.Entry<APRecord, Integer> entryRecord = getEntryRecordWithHighestQuorum(responseEntity, key);
 
         if (entryRecord != null && entryRecord.getKey() != null) {
-            Record record = entryRecord.getKey();
+            APRecord record = entryRecord.getKey();
 
             sendRepair(responseEntity, record);
 
@@ -68,14 +68,14 @@ public class APProtocolService implements ProtocolService {
         }
     }
 
-    private void sendRepair(List<ResponseEntity<Record>> responseEntity, Record record) {
+    private void sendRepair(List<ResponseEntity<APRecord>> responseEntity, APRecord record) {
         apProtocolClient.repair(responseEntity, record).subscribe(clientResponse -> {
             log.info("AP Service - Repair {} status {}",
                     clientResponse.headers().header("x-sys-ip").stream().findFirst().get(),
                     clientResponse.statusCode());
         });
 
-        Record localRecord = recordRepository.findByKey(record.getKey()).orElse(null);
+        APRecord localRecord = (APRecord)recordRepository.findByKey(record.getKey()).orElse(null);
         if (localRecord == null || !localRecord.equals(record)) {
             recordRepository.save(record);
         }
@@ -111,11 +111,11 @@ public class APProtocolService implements ProtocolService {
         }
     }
 
-    public Record commit(String id) {
+    public APRecord commit(String id) {
         Transaction transaction = writeAheadLog.get(id);
 
         if (transaction != null) {
-            Record record = recordRepository.save(new Record(transaction.getKey(), transaction.getValue()));
+            APRecord record = recordRepository.save(new APRecord(transaction.getKey(), transaction.getValue()));
             writeAheadLog.remove(id);
             log.info("- successfully committed proposal {}", id);
             return record;
@@ -138,15 +138,15 @@ public class APProtocolService implements ProtocolService {
         return transaction;
     }
 
-    public Record repair(Record record) {
+    public APRecord repair(APRecord record) {
         log.info("- repair id {} ", record);
 
         return recordRepository.save(record);
     }
 
-    public Record read(String key) {
+    public APRecord read(String key) {
         log.info("- read record for key {} ", key);
-        return recordRepository.findByKey(key).orElse(null);
+        return (APRecord)recordRepository.findByKey(key).orElse(null);
     }
 
     private Mono<ResponseEntity> handleSet(Transaction transaction) {
@@ -190,7 +190,7 @@ public class APProtocolService implements ProtocolService {
                 if (!clientResponse.statusCode().isError()) {
                     if (commitQuorum.incrementAndGet() > writeQuorum) {
                         if (!returnedValue.getAndSet(true)) {
-                            Record record = new Record(transaction.getKey(), transaction.getValue());
+                            APRecord record = new APRecord(transaction.getKey(), transaction.getValue());
                             recordRepository.save(record);
 
                             actual.onNext(ResponseEntity
@@ -234,21 +234,21 @@ public class APProtocolService implements ProtocolService {
         };
     }
 
-    private List<Record> getPeersRecords(List<ResponseEntity<Record>> responseEntity, String key) {
-        List<Record> records = responseEntity.stream()
+    private List<APRecord> getPeersRecords(List<ResponseEntity<APRecord>> responseEntity, String key) {
+        List<APRecord> records = responseEntity.stream()
             .map(responseEntityFromStream -> responseEntityFromStream.getBody())
             .collect(Collectors.toList());
 
-        records.add(recordRepository.findByKey(key).orElse(null));
+        records.add((APRecord)recordRepository.findByKey(key).orElse(null));
         return records;
     }
 
-    private Map.Entry<Record, Integer> getEntryRecordWithHighestQuorum(List<ResponseEntity<Record>> responseEntity, String key) {
-        List<Record> records = getPeersRecords(responseEntity, key);
+    private Map.Entry<APRecord, Integer> getEntryRecordWithHighestQuorum(List<ResponseEntity<APRecord>> responseEntity, String key) {
+        List<APRecord> records = getPeersRecords(responseEntity, key);
 
-        Map<Record, Integer> matches = new HashMap<>();
+        Map<APRecord, Integer> matches = new HashMap<>();
 
-        for (Record record : records) {
+        for (APRecord record : records) {
             if (record != null) {
                 Integer counter = matches.get(record);
                 if (counter != null) {
@@ -261,7 +261,7 @@ public class APProtocolService implements ProtocolService {
             }
         }
 
-        Map<Record, Integer> result = matches.entrySet().stream()
+        Map<APRecord, Integer> result = matches.entrySet().stream()
                 .sorted(Map.Entry.comparingByValue(Comparator.reverseOrder()))
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue,
                         (oldValue, newValue) -> oldValue, LinkedHashMap::new));

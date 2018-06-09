@@ -6,8 +6,8 @@ import java.time.Duration;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import org.magemello.sys.node.domain.Record;
-import org.magemello.sys.node.domain.Transaction;
+import org.magemello.sys.node.protocols.ac.domain.Transaction;
+import org.magemello.sys.node.protocols.ap.domain.APRecord;
 import org.magemello.sys.node.service.P2PService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -57,7 +57,7 @@ public class APProtocolClient {
     }
 
 
-    public Flux<ClientResponse> repair(List<ResponseEntity<Record>> responseEntity, Record record) {
+    public Flux<ClientResponse> repair(List<ResponseEntity<APRecord>> responseEntity, APRecord record) {
 
         List<String> peers = getDisaccordingPeers(responseEntity, record);
 
@@ -66,10 +66,10 @@ public class APProtocolClient {
     }
 
 
-    public Flux<ResponseEntity<Record>> read(String key) {
+    public Flux<ResponseEntity<APRecord>> read(String key) {
         return Flux.fromIterable(p2pService.getPeers())
                 .flatMap(peer -> createWebClientRead(key, peer), p2pService.getPeers().size())
-                .flatMap(clientResponse -> clientResponse.toEntity(Record.class));
+                .flatMap(clientResponse -> clientResponse.toEntity(APRecord.class));
 
     }
 
@@ -101,7 +101,7 @@ public class APProtocolClient {
                 .onErrorResume(throwable -> Mono.just(ClientResponse.create(HttpStatus.BAD_GATEWAY).build()));
     }
 
-    private Mono<ClientResponse> createWebClientRepair(Record record, String peer) {
+    private Mono<ClientResponse> createWebClientRepair(APRecord record, String peer) {
         return newWebClient()
                 .post()
                 .uri("http://" + peer + "/ap/repair")
@@ -127,7 +127,7 @@ public class APProtocolClient {
                 .collect(Collectors.toList());
     }
 
-    private List<String> getDisaccordingPeers(List<ResponseEntity<Record>> responseEntity, Record record) {
+    private List<String> getDisaccordingPeers(List<ResponseEntity<APRecord>> responseEntity, APRecord record) {
         return responseEntity.stream().filter(
                 entity -> !record.equals(entity.getBody()))
                 .map(responseEntityFromStream -> responseEntityFromStream.getHeaders().get("x-sys-ip").stream().findFirst().get())

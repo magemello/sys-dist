@@ -1,6 +1,6 @@
 package org.magemello.sys.node.protocols.ac.clients;
 
-import org.magemello.sys.node.domain.Transaction;
+import org.magemello.sys.node.protocols.ac.domain.Transaction;
 import org.magemello.sys.node.service.P2PService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;

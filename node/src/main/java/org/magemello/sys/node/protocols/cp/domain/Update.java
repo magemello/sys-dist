@@ -1,17 +1,15 @@
 package org.magemello.sys.node.protocols.cp.domain;
 
-import org.magemello.sys.node.domain.RecordTerm;
-
 public class Update {
 
     public Integer from;
     public Integer term;
     public Integer tick;
-    public RecordTerm data;
+    public CPRecord data;
 
     protected Update() {}
 
-    public Update(int whoami, Epoch epoch, RecordTerm data) {
+    public Update(int whoami, Epoch epoch, CPRecord data) {
         this.from = whoami;
         this.term = epoch.getTerm();
         this.tick = epoch.getTick();

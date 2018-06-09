@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import java.util.Optional;
 
 import org.magemello.sys.node.domain.Record;
-import org.magemello.sys.node.domain.RecordTerm;
+import org.magemello.sys.node.protocols.cp.domain.CPRecord;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.rest.core.annotation.RepositoryRestResource;
 
@@ -14,7 +14,5 @@ public interface RecordRepository extends JpaRepository<Record, Long> {
 
     Optional<Record> findByKey(String key);
 
-    Optional<RecordTerm> findByKeyOrderByKey(String key);
-
-    ArrayList<RecordTerm> findByTermLessThanEqualAndTickLessThanEqual(Integer term, Integer tick);
+    ArrayList<CPRecord> findByTermLessThanEqualAndTickLessThanEqual(Integer term, Integer tick);
 }

@@ -1,7 +1,7 @@
 package org.magemello.sys.node.protocols.ac.controller;
 
 import org.magemello.sys.node.domain.Record;
-import org.magemello.sys.node.domain.Transaction;
+import org.magemello.sys.node.protocols.ac.domain.Transaction;
 import org.magemello.sys.node.protocols.ac.service.ACProtocolService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

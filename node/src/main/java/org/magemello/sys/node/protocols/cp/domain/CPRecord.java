@@ -1,19 +1,21 @@
-package org.magemello.sys.node.domain;
+package org.magemello.sys.node.protocols.cp.domain;
 
 
 import javax.persistence.Entity;
 
+import org.magemello.sys.node.domain.Record;
+
 @Entity
-public class RecordTerm extends Record{
+public class CPRecord extends Record{
 
     private Integer term;
 
     private Integer tick;
     
-    public RecordTerm() {
+    public CPRecord() {
     }
 
-    public RecordTerm(String key, String value, Integer term, Integer tick) {
+    public CPRecord(String key, String value, Integer term, Integer tick) {
         super(key, value);
         this.term = term;
         this.tick = tick;
@@ -54,7 +56,7 @@ public class RecordTerm extends Record{
             return false;
         if (getClass() != obj.getClass())
             return false;
-        RecordTerm other = (RecordTerm) obj;
+        CPRecord other = (CPRecord) obj;
         if (term == null) {
             if (other.term != null)
                 return false;

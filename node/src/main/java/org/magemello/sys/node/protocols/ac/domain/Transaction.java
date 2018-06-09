@@ -1,4 +1,4 @@
-package org.magemello.sys.node.domain;
+package org.magemello.sys.node.protocols.ac.domain;
 
 public class Transaction {
 

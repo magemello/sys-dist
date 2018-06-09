@@ -1,7 +1,7 @@
 package org.magemello.sys.node.protocols.ap.controller;
 
-import org.magemello.sys.node.domain.Record;
-import org.magemello.sys.node.domain.Transaction;
+import org.magemello.sys.node.protocols.ac.domain.Transaction;
+import org.magemello.sys.node.protocols.ap.domain.APRecord;
 import org.magemello.sys.node.protocols.ap.service.APProtocolService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,7 +36,7 @@ public class APProtocolController {
     @PostMapping("commit/{id}")
     public ResponseEntity<String> commit(@PathVariable String id) {
         log.info("/commit for transaction {}", id);
-        Record committedRecord = apProtocolService.commit(id);
+        APRecord committedRecord = apProtocolService.commit(id);
         if (committedRecord != null) {
             return createResponse("AP QUORUM Commit - Transaction executed: " + committedRecord.toString(), HttpStatus.OK);
         } else {
@@ -57,14 +57,14 @@ public class APProtocolController {
     }
 
     @PostMapping("repair")
-    public ResponseEntity<String> repair(@RequestBody Record record) {
+    public ResponseEntity<String> repair(@RequestBody APRecord record) {
         log.info("/repair for key {}", record.getKey());
-        Record repairedRecord = apProtocolService.repair(record);
+        APRecord repairedRecord = apProtocolService.repair(record);
         return createResponse("AP QUORUM Repair - Executed: " + repairedRecord.toString(), HttpStatus.OK);
     }
 
     @GetMapping("read/{key}")
-    public ResponseEntity<Record> read(@PathVariable String key) {
+    public ResponseEntity<APRecord> read(@PathVariable String key) {
         log.info("/read for key {}", key);
         return ResponseEntity
                 .status(HttpStatus.OK)

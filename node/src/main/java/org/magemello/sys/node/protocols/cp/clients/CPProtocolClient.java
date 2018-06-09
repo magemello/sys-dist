@@ -3,9 +3,9 @@ package org.magemello.sys.node.protocols.cp.clients;
 import java.time.Duration;
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.magemello.sys.node.domain.RecordTerm;
-import org.magemello.sys.node.domain.VoteRequest;
+import org.magemello.sys.node.protocols.cp.domain.CPRecord;
 import org.magemello.sys.node.protocols.cp.domain.Update;
+import org.magemello.sys.node.protocols.cp.domain.VoteRequest;
 import org.magemello.sys.node.service.P2PService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -87,13 +87,13 @@ public class CPProtocolClient {
                 .onErrorResume(throwable -> Mono.just(ClientResponse.create(HttpStatus.BAD_GATEWAY).build()));
     }
 
-    public Flux<RecordTerm> history(Integer term, Integer tick, Integer port) {
+    public Flux<CPRecord> history(Integer term, Integer tick, Integer port) {
         return WebClientFactory.newWebClient()
                 .get()
                 .uri("http://127.0.0." + (port - 3000) + ":" + port + "/cp/history/" + term.toString() + "/" + tick.toString())
                 .accept(MediaType.APPLICATION_JSON)
                 .retrieve()
-                .bodyToFlux(RecordTerm.class);
+                .bodyToFlux(CPRecord.class);
     }
 
     public Mono<Long> requestVotes(Integer term, int quorum) {

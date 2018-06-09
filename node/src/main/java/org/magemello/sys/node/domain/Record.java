@@ -10,14 +10,14 @@ public class Record {
     @Id
     private String key;
 
-    private String value;
+    private String val;
 
     public Record() {
     }
 
     public Record(String key, String value) {
         this.key = key;
-        this.value = value;
+        this.val = value;
     }
 
     public String getKey() {
@@ -25,7 +25,7 @@ public class Record {
     }
 
     public String getValue() {
-        return value;
+        return val;
     }
 
     @Override
@@ -36,13 +36,13 @@ public class Record {
         Record record = (Record) o;
 
         if (key != null ? !key.equals(record.key) : record.key != null) return false;
-        return value != null ? value.equals(record.value) : record.value == null;
+        return val != null ? val.equals(record.val) : record.val == null;
     }
 
     @Override
     public int hashCode() {
         int result = key != null ? key.hashCode() : 0;
-        result = 31 * result + (value != null ? value.hashCode() : 0);
+        result = 31 * result + (val != null ? val.hashCode() : 0);
         return result;
     }
 
@@ -50,7 +50,7 @@ public class Record {
     public String toString() {
         return "Record{" +
                 ", key='" + key + '\'' +
-                ", value='" + value + '\'' +
+                ", value='" + val + '\'' +
                 '}';
     }
 }

@@ -2,9 +2,9 @@ package org.magemello.sys.node.protocols.cp.controller;
 
 import java.util.ArrayList;
 
-import org.magemello.sys.node.domain.RecordTerm;
-import org.magemello.sys.node.domain.VoteRequest;
+import org.magemello.sys.node.protocols.cp.domain.CPRecord;
 import org.magemello.sys.node.protocols.cp.domain.Update;
+import org.magemello.sys.node.protocols.cp.domain.VoteRequest;
 import org.magemello.sys.node.protocols.cp.service.CPProtocolService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -50,7 +50,7 @@ public class CPProtocolController {
 
 
     @GetMapping("history/{term}/{tick}")
-    public ArrayList<RecordTerm> history(@PathVariable Integer term, @PathVariable Integer tick) {
+    public ArrayList<CPRecord> history(@PathVariable Integer term, @PathVariable Integer tick) {
         return cpProtocolService.getHistory(term, tick);
     }
 

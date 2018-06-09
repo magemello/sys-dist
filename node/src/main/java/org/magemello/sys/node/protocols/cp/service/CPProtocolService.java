@@ -11,11 +11,12 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
-import org.magemello.sys.node.domain.RecordTerm;
-import org.magemello.sys.node.domain.VoteRequest;
+import org.magemello.sys.node.domain.Record;
 import org.magemello.sys.node.protocols.cp.clients.CPProtocolClient;
+import org.magemello.sys.node.protocols.cp.domain.CPRecord;
 import org.magemello.sys.node.protocols.cp.domain.Epoch;
 import org.magemello.sys.node.protocols.cp.domain.Update;
+import org.magemello.sys.node.protocols.cp.domain.VoteRequest;
 import org.magemello.sys.node.repository.RecordRepository;
 import org.magemello.sys.node.service.P2PService;
 import org.magemello.sys.node.service.ProtocolService;
@@ -58,11 +59,11 @@ public class CPProtocolService implements ProtocolService {
     private int electionTerm;
     private VotingBoard votes;
 
-    private RecordTerm updateBuffer;
+    private CPRecord updateBuffer;
 
     @Override
     public Mono<ResponseEntity> get(String key) {
-        Optional<RecordTerm> record = recordRepository.findByKeyOrderByKey(key);
+        Optional<Record> record = recordRepository.findByKey(key);
         if (record.isPresent()) {
             return Mono.just(ResponseEntity.status(HttpStatus.OK).body("RAFT " + record.get().toString()));
         } else {
@@ -80,7 +81,7 @@ public class CPProtocolService implements ProtocolService {
             return Mono.just(ResponseEntity.status(clientResponse.statusCode()).build());
         } else if (status == leader) {
             log.info("\nReceived write request of {} for value {}\n", key, value);
-            updateBuffer = new RecordTerm(key, value, clock.getTerm(), clock.getTick());
+            updateBuffer = new CPRecord(key, value, clock.getTerm(), clock.getTick());
             return Mono.just(ResponseEntity.status(HttpStatus.OK).build());
         } else {
             log.info("\nNo leader elected yet\n");
@@ -281,7 +282,7 @@ public class CPProtocolService implements ProtocolService {
         scheduler.schedule(runnable, randomize(DEFAULT_TICK_TIMEOUT / 2), TimeUnit.MILLISECONDS);
     }
 
-    public ArrayList<RecordTerm> getHistory(Integer term, Integer tick) {
+    public ArrayList<CPRecord> getHistory(Integer term, Integer tick) {
         return recordRepository.findByTermLessThanEqualAndTickLessThanEqual(term, tick);
     }
 }
