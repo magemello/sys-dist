@@ -44,7 +44,7 @@ public class APProtocolService implements ProtocolService {
 
     @Override
     public Mono<ResponseEntity> get(String key) {
-        log.info("AP Service - get for {} ", key);
+        log.info("\nAP Service - get for {} ", key);
 
         return new Mono<ResponseEntity>() {
 
@@ -122,7 +122,7 @@ public class APProtocolService implements ProtocolService {
 
     private void sendRepair(List<ResponseEntity<APRecord>> responseEntity, APRecord record) {
         apProtocolClient.repair(responseEntity, record).subscribe(clientResponse -> {
-            log.info("AP Service - Repair {} status {}",
+            log.info("\nAP Service - Repair {} status {}",
                     clientResponse.headers().header("x-sys-ip").stream().findFirst().get(),
                     clientResponse.statusCode());
         });
@@ -135,7 +135,7 @@ public class APProtocolService implements ProtocolService {
 
     @Override
     public Mono<ResponseEntity> set(String key, String value) throws Exception {
-        log.info("AP Service - Proposing to peers");
+        log.info("\nAP Service - Proposing to peers");
         Transaction transaction = new Transaction(key, value);
 
         return handleSet(transaction);
@@ -154,11 +154,11 @@ public class APProtocolService implements ProtocolService {
 
     public boolean propose(Transaction transaction) {
         if (!isAProposalPresentFor(transaction.getKey())) {
-            log.info("- accepted proposal {} for key {}", transaction.get_ID(), transaction.getKey());
+            log.info("\n- accepted proposal {} for key {}", transaction.get_ID(), transaction.getKey());
             writeAheadLog.put(transaction.get_ID(), transaction);
             return true;
         } else {
-            log.info("- refused proposal {} for key {} (already present)", transaction.get_ID(), transaction.getKey());
+            log.info("\n- refused proposal {} for key {} (already present)", transaction.get_ID(), transaction.getKey());
             return false;
         }
     }
@@ -169,10 +169,10 @@ public class APProtocolService implements ProtocolService {
         if (transaction != null) {
             APRecord record = recordRepository.save(new APRecord(transaction.getKey(), transaction.getValue()));
             writeAheadLog.remove(id);
-            log.info("- successfully committed proposal {}", id);
+            log.info("\n- successfully committed proposal {}", id);
             return record;
         } else {
-            log.info("- failed to find proposal {}", id);
+            log.info("\n- failed to find proposal {}", id);
             return null;
         }
     }
@@ -182,22 +182,22 @@ public class APProtocolService implements ProtocolService {
 
         if (transaction != null) {
             transaction = writeAheadLog.remove(id);
-            log.info("- successfully rolled back proposal {}", id);
+            log.info("\n- successfully rolled back proposal {}", id);
         } else {
-            log.info("- failed to find proposal {}", id);
+            log.info("\n- failed to find proposal {}", id);
         }
 
         return transaction;
     }
 
     public APRecord repair(APRecord record) {
-        log.info("- repair id {} ", record);
+        log.info("\n- repair id {} ", record);
 
         return recordRepository.save(record);
     }
 
     public APRecord read(String key) {
-        log.info("- read record for key {} ", key);
+        log.info("\n- read record for key {} ", key);
         return (APRecord) recordRepository.findByKey(key).orElse(null);
     }
 
@@ -211,7 +211,7 @@ public class APProtocolService implements ProtocolService {
 
             @Override
             public void subscribe(CoreSubscriber<? super ResponseEntity> actual) {
-                log.info("Sending proposal for {} to peers", transaction);
+                log.info("\nSending proposal for {} to peers", transaction);
 
                 this.actual = actual;
 
@@ -223,14 +223,14 @@ public class APProtocolService implements ProtocolService {
             private void handlePropose(List<ClientResponse> clientResponses) {
                 Long quorum = clientResponses.stream().filter(clientResponse -> !clientResponse.statusCode().isError()).count();
                 if (quorum >= writeQuorum) {
-                    log.info("Propose for {} succeed, quorum of {} on {}, sending commit to peers", transaction, quorum, writeQuorum);
+                    log.info("\nPropose for {} succeed, quorum of {} on {}, sending commit to peers", transaction, quorum, writeQuorum);
 
                     apProtocolClient.commit(transaction.get_ID())
                             .map(this::manageCommitQuorum).collectList()
                             .subscribe(this::handleCommit,
                                     this::handleError);
                 } else {
-                    log.info("Propose for {} failed, quorum of {} on {} needed", transaction, quorum, writeQuorum);
+                    log.info("\nPropose for {} failed, quorum of {} on {} needed", transaction, quorum, writeQuorum);
 
                     apProtocolClient.rollback(transaction.get_ID(), clientResponses)
                             .subscribe(this::handleRollBackResult,
@@ -260,16 +260,16 @@ public class APProtocolService implements ProtocolService {
                 Integer quorum = commitQuorum.get();
 
                 if (quorum >= writeQuorum) {
-                    log.info("Commit for {} succeed, quorum of {} on {} needed", transaction, quorum, writeQuorum);
+                    log.info("\nCommit for {} succeed, quorum of {} on {} needed", transaction, quorum, writeQuorum);
                 } else {
-                    log.info("Commit for {} failed, quorum of {} on {} needed", transaction, quorum, writeQuorum);
+                    log.info("\nCommit for {} failed, quorum of {} on {} needed", transaction, quorum, writeQuorum);
 
                     this.handleError(new Throwable("Commit for " + transaction.toString() + " failed, quorum of " + quorum + " on " + writeQuorum + " needed"));
                 }
             }
 
             private void handleRollBackResult(Boolean RollBack) {
-                log.info("Peers Rolled Back {}", transaction);
+                log.info("\nPeers Rolled Back {}", transaction);
 
                 actual.onNext(ResponseEntity
                         .status(HttpStatus.BAD_REQUEST)
@@ -295,7 +295,7 @@ public class APProtocolService implements ProtocolService {
 
     @Override
     public void start() {
-        log.info("AP mode (sloppy quorums)");
+        log.info("\nAP mode (sloppy quorums)");
 
     }
 

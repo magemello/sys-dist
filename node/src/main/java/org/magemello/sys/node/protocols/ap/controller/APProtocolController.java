@@ -21,7 +21,7 @@ public class APProtocolController {
 
     @PostMapping("propose")
     public ResponseEntity<String> propose(@RequestBody Transaction transaction) {
-        log.info("/propose for transaction {}", transaction.get_ID());
+        log.info("\n/propose for transaction {}", transaction.get_ID());
         if (isAValidTransaction(transaction)) {
             if (apProtocolService.propose(transaction)) {
                 return createResponse("AP QUORUM Propose - Accepted transaction proposal: " + transaction.toString(), HttpStatus.OK);
@@ -35,7 +35,7 @@ public class APProtocolController {
 
     @PostMapping("commit/{id}")
     public ResponseEntity<String> commit(@PathVariable String id) {
-        log.info("/commit for transaction {}", id);
+        log.info("\n/commit for transaction {}", id);
         APRecord committedRecord = apProtocolService.commit(id);
         if (committedRecord != null) {
             return createResponse("AP QUORUM Commit - Transaction executed: " + committedRecord.toString(), HttpStatus.OK);
@@ -47,7 +47,7 @@ public class APProtocolController {
 
     @PostMapping("rollback/{id}")
     public ResponseEntity<String> rollback(@PathVariable String id) {
-        log.info("/rollback for transaction {}", id);
+        log.info("\n/rollback for transaction {}", id);
         Transaction transactionRollBack = apProtocolService.rollback(id);
         if (transactionRollBack != null) {
             return createResponse("AP QUORUM Rollback - Executed: " + transactionRollBack.toString(), HttpStatus.OK);
@@ -58,14 +58,14 @@ public class APProtocolController {
 
     @PostMapping("repair")
     public ResponseEntity<String> repair(@RequestBody APRecord record) {
-        log.info("/repair for key {}", record.getKey());
+        log.info("\n/repair for key {}", record.getKey());
         APRecord repairedRecord = apProtocolService.repair(record);
         return createResponse("AP QUORUM Repair - Executed: " + repairedRecord.toString(), HttpStatus.OK);
     }
 
     @GetMapping("read/{key}")
     public ResponseEntity<APRecord> read(@PathVariable String key) {
-        log.info("/read for key {}", key);
+        log.info("\n/read for key {}", key);
         return ResponseEntity
                 .status(HttpStatus.OK)
                 .body(apProtocolService.read(key));
