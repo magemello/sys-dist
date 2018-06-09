@@ -129,7 +129,7 @@ public class APProtocolClient {
 
     private List<String> getDisaccordingPeers(List<ResponseEntity<APRecord>> responseEntity, APRecord record) {
         return responseEntity.stream().filter(
-                entity -> !record.equals(entity.getBody()))
+                entity -> !record.getVal().equals(entity.getBody().getVal()))
                 .map(responseEntityFromStream -> responseEntityFromStream.getHeaders().get("x-sys-ip").stream().findFirst().get())
                 .collect(Collectors.toList());
     }

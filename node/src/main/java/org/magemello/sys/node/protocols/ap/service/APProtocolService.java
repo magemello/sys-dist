@@ -21,6 +21,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
+
 @Service("AP")
 @SuppressWarnings("rawtypes")
 public class APProtocolService implements ProtocolService {
@@ -45,27 +46,78 @@ public class APProtocolService implements ProtocolService {
     public Mono<ResponseEntity> get(String key) {
         log.info("AP Service - get for {} ", key);
 
-        List<ResponseEntity<APRecord>> responseEntity = apProtocolClient.read(key).collectList().block();
+        return new Mono<ResponseEntity>() {
 
-        Map.Entry<APRecord, Integer> entryRecord = getEntryRecordWithHighestQuorum(responseEntity, key);
+            private CoreSubscriber<? super ResponseEntity> actual;
 
-        if (entryRecord != null && entryRecord.getKey() != null) {
-            APRecord record = entryRecord.getKey();
+            AtomicBoolean returnedValue = new AtomicBoolean(false);
 
-            sendRepair(responseEntity, record);
+            List<String> matches = Collections.synchronizedList(new ArrayList<String>());
 
-            if (entryRecord.getValue() >= readQuorum) {
-                return Mono.just(ResponseEntity
-                        .status(HttpStatus.OK)
-                        .body("QUORUM " + record.toString()));
-            } else {
-                return Mono.just(ResponseEntity
-                        .status(HttpStatus.CONFLICT).build());
+            @Override
+            public void subscribe(CoreSubscriber<? super ResponseEntity> actual) {
+                this.actual = actual;
+                APRecord record = (APRecord) recordRepository.findByKey(key).orElse(null);
+                if (record != null) {
+                    matches.add(record.getVal());
+                } else {
+                    matches.add(null);
+                }
+
+                if (readQuorum == 1) {
+                    returnedValue.set(true);
+                    returnValue(record);
+                }
+
+                apProtocolClient.read(key).map(this::manageReadQuorum).collectList().subscribe((List<ResponseEntity<APRecord>> responseEntities) -> {
+                    log.info("\n - Sending repair to discording peers");
+
+                    matches.stream().collect(Collectors.groupingBy(s -> s, Collectors.counting()))
+                            .entrySet()
+                            .stream()
+                            .max(Comparator.comparing(Map.Entry::getValue))
+                            .ifPresent(stringLongEntry -> {
+                                sendRepair(responseEntities, new APRecord(key, stringLongEntry.getKey()));
+                            });
+                });
             }
-        } else {
-            return Mono.just(ResponseEntity
-                    .status(HttpStatus.NOT_FOUND).build());
-        }
+
+            private ResponseEntity<APRecord> manageReadQuorum(ResponseEntity<APRecord> apRecordResponseEntity) {
+                log.info("\n - Val {} from {}", apRecordResponseEntity.getBody(), apRecordResponseEntity.getHeaders().get("x-sys-ip"));
+
+                APRecord record = apRecordResponseEntity.getBody();
+                Long matchRecordCounter;
+
+                if (record != null && record.getVal() != null) {
+                    matches.add(record.getVal());
+                    matchRecordCounter = matches.stream().filter(s -> s != null && s.equals(record.getVal())).count();
+                } else {
+                    matches.add(null);
+                    matchRecordCounter = matches.stream().filter(s -> s == null).count();
+                }
+
+                if (matchRecordCounter >= readQuorum) {
+                    if (!returnedValue.getAndSet(true)) {
+                        returnValue(record);
+                    }
+                }
+
+                return apRecordResponseEntity;
+            }
+
+            private void returnValue(APRecord record) {
+                if (record != null) {
+                    actual.onNext(ResponseEntity
+                            .status(HttpStatus.OK)
+                            .body(record));
+                    actual.onComplete();
+                } else {
+                    actual.onNext(ResponseEntity
+                            .status(HttpStatus.NOT_FOUND).build());
+                    actual.onComplete();
+                }
+            }
+        };
     }
 
     private void sendRepair(List<ResponseEntity<APRecord>> responseEntity, APRecord record) {
@@ -75,8 +127,8 @@ public class APProtocolService implements ProtocolService {
                     clientResponse.statusCode());
         });
 
-        APRecord localRecord = (APRecord)recordRepository.findByKey(record.getKey()).orElse(null);
-        if (localRecord == null || !localRecord.equals(record)) {
+        APRecord localRecord = (APRecord) recordRepository.findByKey(record.getKey()).orElse(null);
+        if (localRecord == null || !localRecord.getVal().equals(record.getVal())) {
             recordRepository.save(record);
         }
     }
@@ -146,7 +198,7 @@ public class APProtocolService implements ProtocolService {
 
     public APRecord read(String key) {
         log.info("- read record for key {} ", key);
-        return (APRecord)recordRepository.findByKey(key).orElse(null);
+        return (APRecord) recordRepository.findByKey(key).orElse(null);
     }
 
     private Mono<ResponseEntity> handleSet(Transaction transaction) {
@@ -232,45 +284,6 @@ public class APProtocolService implements ProtocolService {
                 actual.onComplete();
             }
         };
-    }
-
-    private List<APRecord> getPeersRecords(List<ResponseEntity<APRecord>> responseEntity, String key) {
-        List<APRecord> records = responseEntity.stream()
-            .map(responseEntityFromStream -> responseEntityFromStream.getBody())
-            .collect(Collectors.toList());
-
-        records.add((APRecord)recordRepository.findByKey(key).orElse(null));
-        return records;
-    }
-
-    private Map.Entry<APRecord, Integer> getEntryRecordWithHighestQuorum(List<ResponseEntity<APRecord>> responseEntity, String key) {
-        List<APRecord> records = getPeersRecords(responseEntity, key);
-
-        Map<APRecord, Integer> matches = new HashMap<>();
-
-        for (APRecord record : records) {
-            if (record != null) {
-                Integer counter = matches.get(record);
-                if (counter != null) {
-                    counter++;
-                    matches.put(record, counter);
-                } else {
-                    matches.put(record, 1);
-                }
-
-            }
-        }
-
-        Map<APRecord, Integer> result = matches.entrySet().stream()
-                .sorted(Map.Entry.comparingByValue(Comparator.reverseOrder()))
-                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue,
-                        (oldValue, newValue) -> oldValue, LinkedHashMap::new));
-
-        if (result.entrySet().size() > 0) {
-            return result.entrySet().iterator().next();
-        }
-
-        return null;
     }
 
     private boolean isAProposalPresentFor(String key) {

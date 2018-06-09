@@ -11,7 +11,7 @@ public class CPRecord extends Record{
     private Integer term;
 
     private Integer tick;
-    
+
     public CPRecord() {
     }
 

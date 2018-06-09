@@ -8,7 +8,7 @@ import org.magemello.sys.node.domain.Record;
 @Entity
 public class APRecord extends Record {
     private Long timestamp;
-    
+
     public APRecord() {
     }
 
