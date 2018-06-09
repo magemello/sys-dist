@@ -72,13 +72,10 @@ public class APProtocolService implements ProtocolService {
                 apProtocolClient.read(key).map(this::manageReadQuorum).collectList().subscribe((List<ResponseEntity<APRecord>> responseEntities) -> {
                     log.info("\n - Sending repair to discording peers");
 
-                    matches.stream().collect(Collectors.groupingBy(s -> s, Collectors.counting()))
-                            .entrySet()
-                            .stream()
-                            .max(Comparator.comparing(Map.Entry::getValue))
-                            .ifPresent(stringLongEntry -> {
-                                sendRepair(responseEntities, new APRecord(key, stringLongEntry.getKey()));
-                            });
+                    Map<String, Long> occurrences = matches.stream().filter(s -> s != null).collect(Collectors.groupingBy(w -> w, Collectors
+                            .counting()));
+
+                    sendRepair(responseEntities, new APRecord(key, occurrences.entrySet().stream().findFirst().get().getKey()));
                 });
             }
 
