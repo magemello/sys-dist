@@ -3,6 +3,7 @@ package org.magemello.sys.node.protocols.cp.service;
 import static org.magemello.sys.node.protocols.cp.domain.Utils.DEFAULT_TICK_TIMEOUT;
 import static org.magemello.sys.node.protocols.cp.domain.Utils.randomize;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -135,7 +136,7 @@ public class CPProtocolService implements ProtocolService {
         clock.touch();
 
         boolean res = votes.getVote(vote);
-        log.info("\n/vote request from {}, term {}: {}", vote.getPort(), vote.getTerm(), res ? "yes":"no");
+        log.info("\n/vote request from {}, term {}: {}", vote.getPort(), vote.getTerm(), res ? "yes" : "no");
         return res;
     }
 
@@ -226,7 +227,7 @@ public class CPProtocolService implements ProtocolService {
             if (updateBuffer != null) {
                 recordRepository.save(updateBuffer);
                 log.info("\n- sending data: {}", updateBuffer);
-           }
+            }
 
             cpProtocolClient.sendBeat(new Update(serverPort, clock, updateBuffer), quorum).subscribe(responses -> {
                 if (responses < quorum) {
@@ -267,7 +268,7 @@ public class CPProtocolService implements ProtocolService {
 
 
     private void switchStatus(Runnable newStatus) {
-        int term = Math.max(electionTerm,  clock.getTerm());
+        int term = Math.max(electionTerm, clock.getTerm());
         if (status != newStatus) {
             log.info("\nSwitching from status {} to status {} in term {}\n\n", status, newStatus, term);
             status = newStatus;
@@ -278,6 +279,10 @@ public class CPProtocolService implements ProtocolService {
 
     private void scheduleNext(ScheduledExecutorService scheduler, Runnable runnable) {
         scheduler.schedule(runnable, randomize(DEFAULT_TICK_TIMEOUT / 2), TimeUnit.MILLISECONDS);
+    }
+
+    public ArrayList<RecordTerm> getHistory(Integer term, Integer tick) {
+        return recordRepository.findByTermLessThanEqualAndTickLessThanEqual(term, tick);
     }
 }
 

@@ -6,7 +6,6 @@ import org.magemello.sys.node.domain.RecordTerm;
 import org.magemello.sys.node.domain.VoteRequest;
 import org.magemello.sys.node.protocols.cp.domain.Update;
 import org.magemello.sys.node.protocols.cp.service.CPProtocolService;
-import org.magemello.sys.node.repository.RecordRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -23,9 +22,6 @@ public class CPProtocolController {
 
     @Autowired
     private CPProtocolService cpProtocolService;
-
-    @Autowired
-    private RecordRepository recordRepository;
 
     @PostMapping("update")
     public ResponseEntity<String> update(@RequestBody Update update) {
@@ -55,7 +51,7 @@ public class CPProtocolController {
 
     @GetMapping("history/{term}/{tick}")
     public ArrayList<RecordTerm> history(@PathVariable Integer term, @PathVariable Integer tick) {
-        return recordRepository.findByTermLessThanEqualAndTickLessThanEqual(term, tick);
+        return cpProtocolService.getHistory(term, tick);
     }
 
     private ResponseEntity<String> createResponse(String message, HttpStatus status) {
