@@ -277,7 +277,7 @@ public class APProtocolService implements ProtocolService {
         return this.writeAheadLog
                 .entrySet()
                 .stream()
-                .allMatch(stringRecordEntry -> stringRecordEntry.getValue().getKey().equals(key));
+                .anyMatch(stringRecordEntry -> stringRecordEntry.getValue().getKey().equals(key));
     }
 
     @Override

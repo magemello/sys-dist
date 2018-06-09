@@ -61,7 +61,7 @@ public class CPProtocolService implements ProtocolService {
 
     @Override
     public Mono<ResponseEntity> get(String key) {
-        Optional<RecordTerm> record = recordRepository.findByKey(key);
+        Optional<RecordTerm> record = recordRepository.findByKeyOrderByKey(key);
         if (record.isPresent()) {
             return Mono.just(ResponseEntity.status(HttpStatus.OK).body("RAFT " + record.get().toString()));
         } else {
@@ -175,6 +175,14 @@ public class CPProtocolService implements ProtocolService {
         }
 
         return success;
+    }
+
+    public boolean amITheLeader() {
+        return status == leader;
+    }
+
+    public boolean amIAFollower() {
+        return status == follower;
     }
 
     private Runnable follower = new Runnable() {

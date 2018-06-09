@@ -12,7 +12,9 @@ import org.springframework.data.rest.core.annotation.RepositoryRestResource;
 public interface RecordRepository extends JpaRepository<Record, Long> {
     void deleteAll();
 
-    Optional<RecordTerm> findByKey(String key);
+    Optional<Record> findByKey(String key);
+
+    Optional<RecordTerm> findByKeyOrderByKey(String key);
 
     ArrayList<RecordTerm> findByTermLessThanEqualAndTickLessThanEqual(Integer term, Integer tick);
 }
