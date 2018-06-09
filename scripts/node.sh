@@ -11,6 +11,11 @@ if [ $1 = "3004" ]; then
     delay="-Dserver.delay=1500"
 fi
 
+if [ -n "$2" ]
+  then
+    delay="-Dserver.delay=$2"
+fi
+
 iden=$(echo $1-3000 | bc)
 echo Going to start 127.0.0.$iden:$1
 
