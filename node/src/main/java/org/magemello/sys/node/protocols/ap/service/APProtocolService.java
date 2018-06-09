@@ -80,7 +80,8 @@ public class APProtocolService implements ProtocolService {
             }
 
             private ResponseEntity<APRecord> manageReadQuorum(ResponseEntity<APRecord> apRecordResponseEntity) {
-                log.info("\n - Val {} from {}", apRecordResponseEntity.getBody(), apRecordResponseEntity.getHeaders().get("x-sys-ip"));
+                log.info("\n - key {} val {} from {}", getKeyRecord(apRecordResponseEntity), getValRecord(apRecordResponseEntity),
+                        apRecordResponseEntity.getHeaders().get("x-sys-ip").stream().findFirst().get().substring(10, 14));
 
                 APRecord record = apRecordResponseEntity.getBody();
                 Long matchRecordCounter;
@@ -115,6 +116,22 @@ public class APProtocolService implements ProtocolService {
                 }
             }
         };
+    }
+
+    private String getKeyRecord(ResponseEntity<APRecord> apRecordResponseEntity) {
+        if (apRecordResponseEntity.getBody() != null) {
+            return apRecordResponseEntity.getBody().getKey();
+        } else {
+            return null;
+        }
+    }
+
+    private String getValRecord(ResponseEntity<APRecord> apRecordResponseEntity) {
+        if (apRecordResponseEntity.getBody() != null) {
+            return apRecordResponseEntity.getBody().getVal();
+        } else {
+            return null;
+        }
     }
 
     private void sendRepair(List<ResponseEntity<APRecord>> responseEntity, APRecord record) {

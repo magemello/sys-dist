@@ -29,19 +29,19 @@ public class DemoController {
 
     @Autowired
     ProtocolServiceProxy protocolService;
-    
+
     @GetMapping("/dump")
     public ResponseEntity<?> dumpDatabase() throws JsonProcessingException {
-        
+
         ObjectWriter writer = new ObjectMapper()
-            .writer()
-            .withDefaultPrettyPrinter();
-        
+                .writer()
+                .withDefaultPrettyPrinter();
+
         log.info("\n\n===========================");
         log.info("\nCurrent database contents:");
         Iterable<Record> records = recordRepository.findAll();
         for (Record record : records) {
-            log.info("\n"+writer.writeValueAsString(record));
+            log.info("\n" + writer.writeValueAsString(record));
         }
         log.info("\n===========================");
         log.info("\n\n");
@@ -52,8 +52,8 @@ public class DemoController {
     @GetMapping("/clean")
     public ResponseEntity<?> cleanScreen() {
         protocolService.onCleanup();
-        
-        for(int i=0; i<100; i++) {
+
+        for (int i = 0; i < 100; i++) {
             log.info("\n");
         }
 
@@ -69,4 +69,9 @@ public class DemoController {
         return new ResponseEntity<>(res ? HttpStatus.OK : HttpStatus.BAD_REQUEST);
     }
 
+    @PostMapping("/cleandb")
+    public ResponseEntity<?> switchProtocol() {
+        recordRepository.deleteAll();
+        return new ResponseEntity<>(HttpStatus.OK);
+    }
 }
