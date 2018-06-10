@@ -59,7 +59,7 @@ public class CPProtocolService implements ProtocolService {
     private int electionTerm;
     private VotingBoard votes;
 
-    private CPRecord updateBuffer;
+    private volatile CPRecord updateBuffer;
 
     @Override
     public Mono<ResponseEntity> get(String key) {
@@ -224,18 +224,20 @@ public class CPProtocolService implements ProtocolService {
         public void run() {
             clock.nextTick();
 
-            log.info("\rBeating, term={},tick={}", clock.getTerm(), clock.getTick());
-            if (updateBuffer != null) {
-                recordRepository.save(updateBuffer);
-                log.info("\n- sending data: {}\n", updateBuffer);
-            }
+            CPRecord localBuffer = updateBuffer;
+            updateBuffer = null;
 
-            cpProtocolClient.sendBeat(new Update(serverPort, clock, updateBuffer), quorum).subscribe(responses -> {
+            log.info("\rBeating, term={},tick={}", clock.getTerm(), clock.getTick());
+            if (localBuffer != null) {
+                recordRepository.save(localBuffer);
+                log.info("\n- sending data: {}\n", localBuffer);
+            }
+            
+            cpProtocolClient.sendBeat(new Update(serverPort, clock, localBuffer), quorum).subscribe(responses -> {
                 if (responses < quorum) {
                     log.info("\nI was able to end the beat only to {} followers for term {}", responses, clock.getTerm());
                     switchToFollower();
                 }
-                updateBuffer = null;
             });
         }
 
