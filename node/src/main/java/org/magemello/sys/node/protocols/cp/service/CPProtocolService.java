@@ -232,7 +232,7 @@ public class CPProtocolService implements ProtocolService {
                 recordRepository.save(localBuffer);
                 log.info("\n- sending data: {}\n", localBuffer);
             }
-            
+
             cpProtocolClient.sendBeat(new Update(serverPort, clock, localBuffer), quorum).subscribe(responses -> {
                 if (responses < quorum) {
                     log.info("\nI was able to end the beat only to {} followers for term {}", responses, clock.getTerm());
