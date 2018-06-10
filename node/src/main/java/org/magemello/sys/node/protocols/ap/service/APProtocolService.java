@@ -75,7 +75,8 @@ public class APProtocolService implements ProtocolService {
                     Map<String, Long> occurrences = matches.stream().filter(s -> s != null).collect(Collectors.groupingBy(w -> w, Collectors
                             .counting()));
 
-                    sendRepair(responseEntities, new APRecord(key, occurrences.entrySet().stream().findFirst().get().getKey()));
+                    sendRepair(responseEntities, new APRecord(key, occurrences.entrySet().stream().max((entry1, entry2) ->
+                            entry1.getValue() > entry2.getValue() ? 1 : -1).get().getKey()));
                 });
             }
 
